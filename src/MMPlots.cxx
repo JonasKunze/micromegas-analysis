@@ -98,9 +98,10 @@ bool isY(int id) {
  */
 TH2F* generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 
-	vector<vector<short> > chargeByTimeByStrip = *event->apv_q;
-	unsigned int numberOfStrips = chargeByTimeByStrip[0].size();
-	unsigned int numberOfTimeSlices = chargeByTimeByStrip.size();
+	vector<vector<short> > chargeByStripByTime = *event->apv_q;
+	unsigned int numberOfStrips = chargeByStripByTime.size();
+	unsigned int numberOfTimeSlices = chargeByStripByTime[0].size();
+
 	/*
 	 * Generate a new 3D histogram for the event display (x=strip, y=timeslice, z=charge)
 	 *
@@ -109,17 +110,17 @@ TH2F* generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 	// Generate the title of the histogram
 	stringstream histoName;
 	histoName.str("");
-	histoName << eventNumber << "nameOfHistogram";
+	histoName << eventNumber << "-Eventdisplay";
 
 	/*
 	 * Initialize a new root TH2F histogram with the right title, labels and bining:
 	 *
-	 * We'll have numverOfStrips x-bins going from 0 to numberOfStrips -1 and
-	 * numberOfTimeSclies x-bins going from 0 to (numberOfTimeSlices-1) * 25
+	 * We'll have numberOfStrips x-bins going from 0 to numberOfStrips -1 and
+	 * numberOfTimeSclies x-bins going from 0 to numberOfTimeSlices-1
 	 */
 	TH2F* eventDisplay = new TH2F(histoName.str().c_str(),
-			";Strip Number; Time [µs]", numberOfStrips, 0, numberOfStrips - 1,
-			numberOfTimeSlices, 0, (numberOfTimeSlices - 1) * 25);
+			";Strip Number; Time [25 ns]", numberOfStrips, 0,
+			numberOfStrips - 1, numberOfTimeSlices, 0, numberOfTimeSlices - 1);
 
 	// Store the new histogram in the global map
 	general_mapHist2DEvent[histoName.str()] = eventDisplay;
@@ -130,7 +131,7 @@ TH2F* generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 	for (unsigned int stripNum = 0; stripNum != numberOfStrips; stripNum++) {
 		for (unsigned int timeSlice = 0; timeSlice != numberOfTimeSlices;
 				timeSlice++) {
-			short charge = chargeByTimeByStrip[stripNum][timeSlice];
+			short charge = chargeByStripByTime[stripNum][timeSlice];
 			eventDisplay->SetBinContent(stripNum/*x*/, timeSlice/*y*/,
 					charge/*z*/);
 		}
@@ -138,12 +139,18 @@ TH2F* generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 	return eventDisplay;
 }
 
-void fitGauss(vector<short> chargeByStrip, unsigned int numberOfStrips) {
+void fitGauss(vector<short> chargeByStripAtMaxChargeTime) {
 	TH1F *maxChargeDistribution = new TH1F("maxChargeDistribution",
-			"; strip; charge", numberOfStrips, 0, numberOfStrips - 1);
+			"; strip; charge", chargeByStripAtMaxChargeTime.size(), 0,
+			chargeByStripAtMaxChargeTime.size() - 1);
 
-	for (unsigned int stripID = 0; stripID < chargeByStrip.size(); stripID++) {
-		maxChargeDistribution->SetBinContent(stripID, chargeByStrip[stripID]);
+	/*
+	 * Fill the histogram
+	 */
+	for (unsigned int strip = 0; strip != chargeByStripAtMaxChargeTime.size();
+			strip++) {
+		maxChargeDistribution->SetBinContent(strip,
+				chargeByStripAtMaxChargeTime[strip]);
 	}
 
 	maxChargeDistribution->Fit("gaus", "q");
@@ -164,10 +171,10 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	/*
 	 data variables:
-	 1D vector event->apv_id: 	ID of APV which shows hit (needed to select if hit is in X or Y)
-	 1D vector event->mm_strip:	number of the strip which shows signal
+	 1D vector event->apv_id: 		ID of APV which shows hit (needed to select if hit is in X or Y)
+	 1D vector event->mm_strip:		number of the strip which shows signal
 	 1D vector event->apv_qmax: 	maximum charge of the strip
-	 1D vector event->apv_tbqmax: 	time slice of maximum charge (time [ns] = timeSlice*25)
+	 1D vector event->apv_tbqmax: 	time slice of maximum charge (time = timeSlice * 25)
 
 	 access element of 1D vector: eg. event->apv_id->at(i) gives strip data at position i in all vectors correspond to
 
@@ -244,10 +251,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	vector<unsigned int> stripNumShowingSignal = *event->mm_strip;
 	vector<short> maxChargeOfStrip = *event->apv_qmax;
 	vector<short> timeSliceOfMaxChargeOfStrip = *event->apv_tbqmax;
-	vector<vector<short> > chargeByTimeByStrip = *event->apv_q;
-
-	unsigned int numberOfTimeSlices = chargeByTimeByStrip.size();
-	unsigned int numberOfStrips = stripNumShowingSignal.size();
+	vector<vector<short> > chargeByStripByTime = *event->apv_q;
 
 	/*
 	 * 1. Created Eventdisplay
@@ -257,11 +261,11 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	/*
 	 * 2. Find maximum charge
 	 */
-	int maxCharge = 1 << 31; // -inf
-	int stripWithMaxCharge = -1;
-	int timeSliceOfMaxCharge = -1;
+	short maxCharge = maxChargeOfStrip[0];
+	int stripWithMaxCharge = 0;
+	int timeSliceOfMaxCharge = 0;
 
-	for (int strip = 0; strip != maxChargeOfStrip.size(); strip++) {
+	for (unsigned int strip = 0; strip != maxChargeOfStrip.size(); strip++) {
 		if (maxChargeOfStrip[strip] > maxCharge) {
 			maxCharge = maxChargeOfStrip[strip];
 			stripWithMaxCharge = strip;
@@ -272,6 +276,14 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	/*
 	 * 4. Gaussian fits to charge distribution over strips at timestep with maximum charge
 	 */
+	vector<short> chargeByStripAtMaxChargeTime;
+	for (unsigned int strip = 0; strip != chargeByStripByTime.size(); strip++) {
+		vector<short> chargeByTime = chargeByStripByTime[strip];
+		chargeByStripAtMaxChargeTime[strip] =
+				chargeByTime[timeSliceOfMaxCharge];
+	}
+
+	fitGauss(chargeByStripAtMaxChargeTime);
 
 //storage after procession
 //Fill trees	(replace 1)
