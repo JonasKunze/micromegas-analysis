@@ -139,10 +139,17 @@ TH2F* generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 	return eventDisplay;
 }
 
-void fitGauss(vector<short> chargeByStripAtMaxChargeTime) {
-	TH1F *maxChargeDistribution = new TH1F("maxChargeDistribution",
-			"; strip; charge", chargeByStripAtMaxChargeTime.size(), 0,
+void fitGauss(vector<short> chargeByStripAtMaxChargeTime, int eventNumber) {
+	// Generate the title of the histogram
+	stringstream histoName;
+	histoName.str("");
+	histoName << eventNumber << "-maxChargeDistribution";
+
+	TH1F *maxChargeDistribution = new TH1F(histoName.str(), "; strip; charge",
+			chargeByStripAtMaxChargeTime.size(), 0,
 			chargeByStripAtMaxChargeTime.size() - 1);
+
+	general_mapPlotFit[histoName.str()] = maxChargeDistribution;
 
 	/*
 	 * Fill the histogram
@@ -164,6 +171,7 @@ void fitGauss(vector<short> chargeByStripAtMaxChargeTime) {
 
 //	gaussFit->GetChisquare();
 //	gaussFit->GetNDF();
+	double reducedChiSquare = gaussFit->GetChisquare() / gaussFit->GetNDF();
 }
 
 // analysis of single event: characteristics of event and gaussian fit
@@ -283,7 +291,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				chargeByTime[timeSliceOfMaxCharge];
 	}
 
-	fitGauss(chargeByStripAtMaxChargeTime);
+	fitGauss(chargeByStripAtMaxChargeTime, eventNumber);
 
 //storage after procession
 //Fill trees	(replace 1)
