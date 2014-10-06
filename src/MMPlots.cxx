@@ -145,8 +145,8 @@ void fitGauss(vector<short> chargeByStripAtMaxChargeTime, int eventNumber) {
 	histoName.str("");
 	histoName << eventNumber << "-maxChargeDistribution";
 
-	TH1F *maxChargeDistribution = new TH1F(histoName.str(), "; strip; charge",
-			chargeByStripAtMaxChargeTime.size(), 0,
+	TH1F *maxChargeDistribution = new TH1F(histoName.str().c_str(),
+			"; strip; charge", chargeByStripAtMaxChargeTime.size(), 0,
 			chargeByStripAtMaxChargeTime.size() - 1);
 
 	general_mapPlotFit[histoName.str()] = maxChargeDistribution;
