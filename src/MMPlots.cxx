@@ -242,8 +242,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	//MMQuickEvent *event, int eventNumber, int TRGBURST
 	vector<unsigned int> xOrY = *event->apv_id;
 	vector<unsigned int> stripNumShowingSignal = *event->mm_strip;
-	vector<unsigned int> maxChargeOfStrip = *event->apv_qmax;
-	vector<unsigned int> timeSliceOfMaxChargeOfStrip = *event->apv_tbqmax;
+	vector<short> maxChargeOfStrip = *event->apv_qmax;
+	vector<short> timeSliceOfMaxChargeOfStrip = *event->apv_tbqmax;
 	vector<vector<short> > chargeByTimeByStrip = *event->apv_q;
 
 	unsigned int numberOfTimeSlices = chargeByTimeByStrip.size();
@@ -262,8 +262,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	int timeSliceOfMaxCharge = -1;
 
 	for (int strip = 0; strip != maxChargeOfStrip.size(); strip++) {
-		if (maxCharge[strip] > maxCharge) {
-			maxCharge = maxCharge[strip];
+		if (maxChargeOfStrip[strip] > maxCharge) {
+			maxCharge = maxChargeOfStrip[strip];
 			stripWithMaxCharge = strip;
 			timeSliceOfMaxCharge = timeSliceOfMaxChargeOfStrip[strip];
 		}
@@ -412,7 +412,7 @@ int main(int argc, char *argv[]) {
 				0, yStrips);
 
 		//initialize trees with structure defined above
-		TTree fitTree = new TTree("T", "results of gauss fit");
+		TTree* fitTree = new TTree("T", "results of gauss fit");
 
 		fitTree->Branch("gauss", &(gauss.gaussXmean),
 				"gaussXmean/D:gaussXmeanError/D:gaussXsigma/D:gaussXcharge/D:gaussXchi/D:gaussXdof/D:gaussXchiRed/D:gaussYmean/D:gaussYmeanError:gaussYsigma/D:gaussYcharge/D:gaussYchi/D:gaussYdof/D:gaussYchiRed/D:number/I");
