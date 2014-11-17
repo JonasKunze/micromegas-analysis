@@ -75,7 +75,7 @@ const int ampStart = 500;
 const int ampEnd = 550;
 const int ampSteps = 25;
 
-// functions to select if hit is in X or Y according to APV ID and mapping while data aquisition
+// functions to select if hit is in X or Y according to APV ID and mapping while data acquisition
 bool isX(int id) {
 	if (id == APVIDMM_X0 || id == APVIDMM_X1 || id == APVIDMM_X2) {
 		return true;
@@ -93,17 +93,16 @@ bool isY(int id) {
 }
 
 /**
- * Generates a new 3D-Histogram showing all measured charges in all strips of all times slices.
- * The Histogram will be stored at general_mapHist2DEvent[eventNumber+"nameOfHistogram"]
+ * Generates a new 2D histogram (heatmap) showing all measured charges in all strips of x or y direction of all times slices.
+ * The histogram will be stored at general_mapHist2DEvent[eventNumber+"nameOfHistogram"]
  */
-TH2F* generateEventDisplay(MMQuickEvent* event, int eventNumber) {
-
-	vector<vector<short> > chargeByStripByTime = *event->apv_q;
-	unsigned int numberOfStrips = chargeByStripByTime.size();
-	unsigned int numberOfTimeSlices = chargeByStripByTime[0].size();
+void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
+	vector<vector<short> > chargeByTimeByStrip = *event->apv_q;
+	unsigned int numberOfStrips = chargeByTimeByStrip.size();
+	unsigned int numberOfTimeSlices = chargeByTimeByStrip[0].size();
 
 	/*
-	 * Generate a new 3D histogram for the event display (x=strip, y=timeslice, z=charge)
+	 * Generate a new 2D histogram for the event display (x=strip, y=timeslice, z=charge)
 	 *
 	 */
 
@@ -112,31 +111,49 @@ TH2F* generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 	histoName.str("");
 	histoName << eventNumber << "-Eventdisplay";
 
+	string histoNameX = histoName.str() + "_X";
+	string histoNameY = histoName.str() + "_Y";
+
 	/*
-	 * Initialize a new root TH2F histogram with the right title, labels and bining:
+	 * Initialize a new root TH2F histogram with the right title, labels and binning:
 	 *
 	 * We'll have numberOfStrips x-bins going from 0 to numberOfStrips -1 and
 	 * numberOfTimeSclies x-bins going from 0 to numberOfTimeSlices-1
 	 */
-	TH2F* eventDisplay = new TH2F(histoName.str().c_str(),
+	TH2F* eventDisplayX = new TH2F(histoNameX.c_str(),
+			";Strip Number; Time [25 ns]", numberOfStrips, 0,
+			numberOfStrips - 1, numberOfTimeSlices, 0, numberOfTimeSlices - 1);
+
+	TH2F* eventDisplayY = new TH2F(histoNameY.c_str(),
 			";Strip Number; Time [25 ns]", numberOfStrips, 0,
 			numberOfStrips - 1, numberOfTimeSlices, 0, numberOfTimeSlices - 1);
 
 	// Store the new histogram in the global map
-	general_mapHist2DEvent[histoName.str()] = eventDisplay;
+	general_mapHist2DEvent[histoNameX] = eventDisplayX;
+	general_mapHist2DEvent[histoNameY] = eventDisplayY;
 
 	/*
-	 * Fill eventDisplay with all measured charges at all strips for all times
+	 * Fill eventDisplay with all measured charges at all strips for all times;
+	 * for all timeSlices, we iterate through all Strips (X and Y). Depending
+	 * on the apvID, the corresponding histogram is filled (X resp. Y). To have consecutive strip numbers for every histogram,
+	 * we use the counters for X and Y.
 	 */
-	for (unsigned int stripNum = 0; stripNum != numberOfStrips; stripNum++) {
-		for (unsigned int timeSlice = 0; timeSlice != numberOfTimeSlices;
-				timeSlice++) {
-			short charge = chargeByStripByTime[stripNum][timeSlice];
-			eventDisplay->SetBinContent(stripNum/*x*/, timeSlice/*y*/,
-					charge/*z*/);
+	for (unsigned int timeSlice = 0; timeSlice != numberOfTimeSlices;
+			timeSlice++) {
+		int counterX = 0, counterY = 0;
+		for (unsigned int stripNum = 0; stripNum != numberOfStrips;
+				stripNum++) {
+			short charge = chargeByTimeByStrip[stripNum][timeSlice];
+			unsigned int apvID = event->apv_id[stripNum];
+			if (isX(apvID)) {
+				eventDisplayX->SetBinContent(counterX++/*x*/, timeSlice/*y*/,
+						charge/*z*/);
+			} else {
+				eventDisplayY->SetBinContent(counterY++/*x*/, timeSlice/*y*/,
+						charge/*z*/);
+			}
 		}
 	}
-	return eventDisplay;
 }
 
 void fitGauss(vector<short> chargeByStripAtMaxChargeTime, int eventNumber) {
@@ -182,7 +199,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 1D vector event->apv_id: 		ID of APV which shows hit (needed to select if hit is in X or Y)
 	 1D vector event->mm_strip:		number of the strip which shows signal
 	 1D vector event->apv_qmax: 	maximum charge of the strip
-	 1D vector event->apv_tbqmax: 	time slice of maximum charge (time = timeSlice * 25)
+	 1D vector event->apv_tbqmax: 	time slice of maximum charge (time = #TimeSlice * 25)
 
 	 access element of 1D vector: eg. event->apv_id->at(i) gives strip data at position i in all vectors correspond to
 
@@ -262,22 +279,38 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	vector<vector<short> > chargeByStripByTime = *event->apv_q;
 
 	/*
-	 * 1. Created Eventdisplay
+	 * 1. Create event display
 	 */
 	generateEventDisplay(event, eventNumber);
 
 	/*
 	 * 2. Find maximum charge
 	 */
-	short maxCharge = maxChargeOfStrip[0];
-	int stripWithMaxCharge = 0;
-	int timeSliceOfMaxCharge = 0;
+	short maxChargeX = 0;
+	int stripWithMaxChargeX = 0;
+	int timeSliceOfMaxChargeX = 0;
+	short maxChargeY = 0;
+	int stripWithMaxChargeY = 0;
+	int timeSliceOfMaxChargeY = 0;
 
-	for (unsigned int strip = 0; strip != maxChargeOfStrip.size(); strip++) {
-		if (maxChargeOfStrip[strip] > maxCharge) {
-			maxCharge = maxChargeOfStrip[strip];
-			stripWithMaxCharge = strip;
-			timeSliceOfMaxCharge = timeSliceOfMaxChargeOfStrip[strip];
+	/*
+	 * Iterate through all strips and check if it is X or Y data. Compare the maximum charge
+	 * of the strip with the maximum charge found so far for the current axis. Store current charge, strip number
+	 * and time slice with the maximum charge if the current charge is larger than before.
+	 */
+	for (unsigned int strip = 1; strip != maxChargeOfStrip.size(); strip++) {
+		if (isX(strip)) { // X axis
+			if (maxChargeOfStrip[strip] > maxChargeX) {
+				maxChargeX = maxChargeOfStrip[strip];
+				stripWithMaxChargeX = strip;
+				timeSliceOfMaxChargeX = timeSliceOfMaxChargeOfStrip[strip];
+			}
+		} else { // Y axis
+			if (maxChargeOfStrip[strip] > maxChargeY) {
+			maxChargeY = maxChargeOfStrip[strip];
+			stripWithMaxChargeY = strip;
+			timeSliceOfMaxChargeY = timeSliceOfMaxChargeOfStrip[strip];
+			}
 		}
 	}
 
