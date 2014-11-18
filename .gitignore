@@ -1,3 +1,4 @@
 Debug/
-
+data/
+src/MMPlots
 *.o
