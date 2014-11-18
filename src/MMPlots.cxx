@@ -144,7 +144,7 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 		for (unsigned int stripNum = 0; stripNum != numberOfStrips;
 				stripNum++) {
 			short charge = chargeByTimeByStrip[stripNum][timeSlice];
-			unsigned int apvID = event->apv_id[stripNum];
+			unsigned int apvID = (*event->apv_id)[stripNum];
 			if (isX(apvID)) {
 				eventDisplayX->SetBinContent(counterX++/*x*/, timeSlice/*y*/,
 						charge/*z*/);
