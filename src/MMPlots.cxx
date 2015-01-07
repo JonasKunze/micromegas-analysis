@@ -315,6 +315,12 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	}
 
 	/*
+	 * zu cuts: 1. eventdisplays anschauen, erste überlegungen zu cuts
+	 * 2. ladungsverteilung aller events anschauen, daran cuts festmachen (Anzahl hits gegen ladungshöhe)
+	 * 3. eventuell nur ein-hit-events aussuchen, je nachdem, wie gut 2. hit von erstem zu unterscheiden ist (pulshöhendifferenz)
+	 */
+
+	/*
 	 * 4. Gaussian fits to charge distribution over strips at timestep with maximum charge
 	 */
 	vector<short> chargeByStripAtMaxChargeTime;
