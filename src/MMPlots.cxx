@@ -50,8 +50,10 @@ gauss_t gauss;
 maxi_t maxi;
 
 //set output path and name of output files
-const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
-const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
+//const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
+//const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
+const string inPath = "/home/kunzejo/workspace/micromegas-analysis/data/";		//Path of the Input
+const string outPath = "/home/kunzejo/workspace/micromegas-analysis/data/output/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
 const string combinedPlotsFile = "";// Name of the file for the combined results of all runs
 
@@ -320,56 +322,56 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 * Store the charge values of every strip number for the time slice with
 	 * the maximum charge found in one event for X and Y separately
 	 */
-	vector<short> chargeByStripAtMaxChargeTimeX;
-	vector<short> chargeByStripAtMaxChargeTimeY;
-	for (unsigned int strip = 0; strip != chargeByStripByTime.size(); strip++) {
-		if (isX(strip)) {
-			chargeByStripAtMaxChargeTimeX.push_back(
-					chargeByStripByTime[strip][timeSliceOfMaxChargeX]);
-		} else {
-			chargeByStripAtMaxChargeTimeY.push_back(
-					chargeByStripByTime[strip][timeSliceOfMaxChargeY]);
-		}
-	}
-
-	TF1* gaussFitX = fitGauss(chargeByStripAtMaxChargeTimeX, eventNumber,
-			"maxChargeDistributionX");
-	TF1* gaussFitY = fitGauss(chargeByStripAtMaxChargeTimeY, eventNumber,
-			"maxChargeDistributionY");
-
-//storage after procession
-//Fill trees	(replace 1)
-	if (/*condition to store the fit*/false) {
-		gauss.gaussXmean = gaussFitX->GetParameter(1);
-		gauss.gaussXmeanError = gaussFitX->GetParError(1);
-		gauss.gaussXsigma = gaussFitX->GetParameter(2);
-		gauss.gaussXcharge = gaussFitX->GetParameter(0);
-		gauss.gaussXchi = gaussFitX->GetChisquare();
-		gauss.gaussXdof = gaussFitX->GetNDF();
-		gauss.gaussXchiRed = gaussFitX->GetChisquare()/gaussFitX->GetNDF();
-		gauss.gaussYmean = gaussFitY->GetParameter(1);
-		gauss.gaussYmeanError = gaussFitY->GetParError(1);
-		gauss.gaussYsigma = gaussFitX->GetParameter(2);
-		gauss.gaussYcharge = gaussFitX->GetParameter(0);
-		gauss.gaussYchi = gaussFitY->GetChisquare();
-		gauss.gaussYdof = gaussFitY->GetNDF();
-		gauss.gaussYchiRed = gaussFitY->GetChisquare()/gaussFitY->GetNDF();
-		gauss.number = eventNumber;
-
-		maxi.maxXmean = 1;
-		maxi.maxYmean = 1;
-		maxi.maxXcharge = 1;
-		maxi.maxYcharge = 1;
-		maxi.maxXcluster = 1;
-		maxi.maxYcluster = 1;
-		maxi.number = eventNumber;
-
-		general_mapTree["fits"]->Fill();
-
-		general_mapHist2D["mmhitmapMaxCut"]->Fill(/*x value*/1,/*y value*/1);
-		general_mapHist2D["mmhitmapGausCut"]->Fill(/*x value*/1,/*y value*/1);
-
-	}
+//	vector<short> chargeByStripAtMaxChargeTimeX;
+//	vector<short> chargeByStripAtMaxChargeTimeY;
+//	for (unsigned int strip = 0; strip != chargeByStripByTime.size(); strip++) {
+//		if (isX(strip)) {
+//			chargeByStripAtMaxChargeTimeX.push_back(
+//					chargeByStripByTime[strip][timeSliceOfMaxChargeX]);
+//		} else {
+//			chargeByStripAtMaxChargeTimeY.push_back(
+//					chargeByStripByTime[strip][timeSliceOfMaxChargeY]);
+//		}
+//	}
+//
+//	TF1* gaussFitX = fitGauss(chargeByStripAtMaxChargeTimeX, eventNumber,
+//			"maxChargeDistributionX");
+//	TF1* gaussFitY = fitGauss(chargeByStripAtMaxChargeTimeY, eventNumber,
+//			"maxChargeDistributionY");
+//
+////storage after procession
+////Fill trees	(replace 1)
+//	if (/*condition to store the fit*/false) {
+//		gauss.gaussXmean = gaussFitX->GetParameter(1);
+//		gauss.gaussXmeanError = gaussFitX->GetParError(1);
+//		gauss.gaussXsigma = gaussFitX->GetParameter(2);
+//		gauss.gaussXcharge = gaussFitX->GetParameter(0);
+//		gauss.gaussXchi = gaussFitX->GetChisquare();
+//		gauss.gaussXdof = gaussFitX->GetNDF();
+//		gauss.gaussXchiRed = gaussFitX->GetChisquare()/gaussFitX->GetNDF();
+//		gauss.gaussYmean = gaussFitY->GetParameter(1);
+//		gauss.gaussYmeanError = gaussFitY->GetParError(1);
+//		gauss.gaussYsigma = gaussFitX->GetParameter(2);
+//		gauss.gaussYcharge = gaussFitX->GetParameter(0);
+//		gauss.gaussYchi = gaussFitY->GetChisquare();
+//		gauss.gaussYdof = gaussFitY->GetNDF();
+//		gauss.gaussYchiRed = gaussFitY->GetChisquare()/gaussFitY->GetNDF();
+//		gauss.number = eventNumber;
+//
+//		maxi.maxXmean = 1;
+//		maxi.maxYmean = 1;
+//		maxi.maxXcharge = 1;
+//		maxi.maxYcharge = 1;
+//		maxi.maxXcluster = 1;
+//		maxi.maxYcluster = 1;
+//		maxi.number = eventNumber;
+//
+//		general_mapTree["fits"]->Fill();
+//
+//		general_mapHist2D["mmhitmapMaxCut"]->Fill(/*x value*/1,/*y value*/1);
+//		general_mapHist2D["mmhitmapGausCut"]->Fill(/*x value*/1,/*y value*/1);
+//
+//	}
 
 	if (/*condition to fill general histograms*/false) {
 		if (/*condition to fill hitmap*/false) { // coincidence check between x and y signal (within 25ns)
@@ -494,7 +496,7 @@ int main(int argc, char *argv[]) {
 		m_TotalEventNumber = m_event->getEventNumber();
 
 		// loop over all events
-		while (m_event->getNextEvent()) {
+		while (m_event->getNextEvent() && eventNumber!=1000) {
 			if (analyseMMEvent(m_event, eventNumber, TRGBURST) == true) {
 			}
 			eventNumber++;

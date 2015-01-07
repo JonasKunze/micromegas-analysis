@@ -18,7 +18,7 @@ class MapFile {
 private:
 	void createFile() {
 		m_mapFile["VD100VA500"] = new TFile((path+appendName+"_VD100VA500.root").c_str(), (Option_t*)"RECREATE");		// string has to be like VDvalueVAvalue, value must have 3 digits
-		m_mapFile["VD100VA525"] = new TFile((path+appendName+"_VD100VA500.root").c_str(), (Option_t*)"RECREATE");
+		//m_mapFile["VD100VA525"] = new TFile((path+appendName+"_VD100VA500.root").c_str(), (Option_t*)"RECREATE");
 	}
 
 public:
@@ -43,14 +43,13 @@ public:
 			cout<<"======================================================================"<<endl;
 
 			if (type == "VD100VA500") {
-				vec_filename.push_back(data_dir + "run332.root");
+				vec_filename.push_back(data_dir + "run373.root");
 			} else if (type == "VD100VA525") {
 				vec_filename.push_back(data_dir + "run334.root");
 
 			}
 
 			return vec_filename;
-
 		}
 
 
