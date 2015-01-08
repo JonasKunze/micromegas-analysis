@@ -5,6 +5,7 @@
 
 /*
  * Limit the number of events to be processed to gain speed for debugging
+ * -1 means all events will be processed
  */
 #define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 100
 
