@@ -3,6 +3,11 @@
 #include "MapFile.h"
 #include "TGraphErrors.h"
 
+/*
+ * Limit the number of events to be processed to gain speed for debugging
+ */
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 100
+
 using namespace std;
 
 // Global Variables
@@ -52,8 +57,6 @@ maxi_t maxi;
 //set output path and name of output files
 const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
 const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
-//const string inPath = "/home/kunzejo/workspace/micromegas-analysis/data/";		//Path of the Input
-//const string outPath = "/home/kunzejo/workspace/micromegas-analysis/data/output/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
 const string combinedPlotsFile = "";// Name of the file for the combined results of all runs
 
@@ -99,9 +102,9 @@ bool isY(int id) {
  * The histogram will be stored at general_mapHist2DEvent[eventNumber+"nameOfHistogram"]
  */
 void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
-	vector<vector<short> > chargeByTimeByStrip = *event->apv_q;
-	unsigned int numberOfStrips = chargeByTimeByStrip.size();
-	unsigned int numberOfTimeSlices = chargeByTimeByStrip[0].size();
+	vector<vector<short> > chargeOfTimeOfStrip = *event->apv_q;
+	unsigned int numberOfStrips = chargeOfTimeOfStrip.size();
+	unsigned int numberOfTimeSlices = chargeOfTimeOfStrip[0].size();
 
 	/*
 	 * Generate a new 2D histogram for the event display (x=strip, y=timeslice, z=charge)
@@ -137,17 +140,25 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 	/*
 	 * Fill eventDisplay with all measured charges at all strips for all times;
 	 * for all timeSlices, we iterate through all Strips (X and Y). Depending
-	 * on the apvID, the corresponding histogram is filled (X resp. Y). To have consecutive strip numbers for every histogram,
-	 * we use the counters for X and Y.
+	 * on the apvID, the corresponding histogram is filled (X resp. Y). To have
+	 * consecutive strip numbers for every histogram, we use the counters for X and Y.
 	 */
 	for (unsigned int timeSlice = 0; timeSlice != numberOfTimeSlices;
 			timeSlice++) {
 		int counterX = 0, counterY = 0;
 		for (unsigned int stripNum = 0; stripNum != numberOfStrips;
 				stripNum++) {
-			short charge = chargeByTimeByStrip[stripNum][timeSlice];
+			short charge = chargeOfTimeOfStrip[stripNum][timeSlice];
 			unsigned int apvID = (*event->apv_id)[stripNum];
 			if (isX(apvID)) {
+				/*
+				 * ???
+				 * Wie erhalte ich die absolute Position eines Strips? Wir kennen nur
+				 * die Position innerhalb des Vectors apv_q der allerdings für jedes
+				 * Event eine beliebige Zahl an Strips beinhaltet (Zero suppression?!)
+				 *
+				 * cout << chargeOfStripOfTime.size() << endl;
+				 */
 				eventDisplayX->SetBinContent(counterX++/*x*/, timeSlice/*y*/,
 						charge/*z*/);
 			} else {
@@ -158,7 +169,7 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 	}
 }
 
-TF1* fitGauss(vector<short> chargeByStripAtMaxChargeTime, int eventNumber,
+TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime, int eventNumber,
 		std::string name) {
 	// Generate the title of the histogram
 	stringstream histoName;
@@ -166,18 +177,18 @@ TF1* fitGauss(vector<short> chargeByStripAtMaxChargeTime, int eventNumber,
 	histoName << eventNumber << name;
 
 	TH1F *maxChargeDistribution = new TH1F(histoName.str().c_str(),
-			"; strip; charge", chargeByStripAtMaxChargeTime.size(), 0,
-			chargeByStripAtMaxChargeTime.size() - 1);
+			"; strip; charge", chargeOfStripAtMaxChargeTime.size(), 0,
+			chargeOfStripAtMaxChargeTime.size() - 1);
 
 	general_mapPlotFit[histoName.str()] = maxChargeDistribution;
 
 	/*
 	 * Fill the histogram
 	 */
-	for (unsigned int strip = 0; strip != chargeByStripAtMaxChargeTime.size();
+	for (unsigned int strip = 0; strip != chargeOfStripAtMaxChargeTime.size();
 			strip++) {
 		maxChargeDistribution->SetBinContent(strip,
-				chargeByStripAtMaxChargeTime[strip]);
+				chargeOfStripAtMaxChargeTime[strip]);
 	}
 
 	maxChargeDistribution->Fit("gaus", "q");
@@ -202,7 +213,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 access element of 2D vector: event->apv_q->at(i).at(j) gives charge at time step j of strip event->apv_id->at(i)
 
 
-	 usefull code:
+	 useful code:
 	 event->apv_q->size() gives size of this vector (size is the same for all 1D vector and first dimension of 2D vector)
 	 event->apv_q->at(i).size() gives number of recorded timesteps
 
@@ -266,14 +277,16 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 */
 
 	//MMQuickEvent *event, int eventNumber, int TRGBURST
-	vector<unsigned int> xOrY = *event->apv_id;
+	vector<unsigned int> apvIDOfStrip = *event->apv_id; // isX(apvIDOfStrip[i]) returns true if the i-th strip is X-layer
 	vector<unsigned int> stripNumShowingSignal = *event->mm_strip;
 	vector<short> maxChargeOfStrip = *event->apv_qmax;
 	vector<short> timeSliceOfMaxChargeOfStrip = *event->apv_tbqmax;
-	vector<vector<short> > chargeByStripByTime = *event->apv_q;
+	vector<vector<short> > chargeOfStripOfTime = *event->apv_q;
+
 
 	/*
 	 * 1. Create event display
+	 *
 	 */
 	generateEventDisplay(event, eventNumber);
 
@@ -287,19 +300,25 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	int stripWithMaxChargeY = 0;
 	int timeSliceOfMaxChargeY = 0;
 
+	unsigned short numberOfXHits = 0;
+	unsigned short numberOfYHits = 0;
+
 	/*
 	 * Iterate through all strips and check if it is X or Y data. Compare the maximum charge
 	 * of the strip with the maximum charge found so far for the current axis. Store current charge, strip number
 	 * and time slice with the maximum charge if the current charge is larger than before.
 	 */
 	for (unsigned int strip = 1; strip != maxChargeOfStrip.size(); strip++) {
-		if (isX(strip)) { // X axis
+		unsigned int apvID = apvIDOfStrip[strip];
+		if (isX(apvID)) { // X axis
+			numberOfXHits++;
 			if (maxChargeOfStrip[strip] > maxChargeX) {
 				maxChargeX = maxChargeOfStrip[strip];
 				stripWithMaxChargeX = strip;
 				timeSliceOfMaxChargeX = timeSliceOfMaxChargeOfStrip[strip];
 			}
 		} else { // Y axis
+			numberOfYHits++;
 			if (maxChargeOfStrip[strip] > maxChargeY) {
 				maxChargeY = maxChargeOfStrip[strip];
 				stripWithMaxChargeY = strip;
@@ -322,23 +341,23 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 * Store the charge values of every strip number for the time slice with
 	 * the maximum charge found in one event for X and Y separately
 	 */
-	vector<short> chargeByStripAtMaxChargeTimeX;
-	vector<short> chargeByStripAtMaxChargeTimeY;
-	for (unsigned int strip = 0; strip != chargeByStripByTime.size(); strip++) {
-		if (isX(strip)) {
-			chargeByStripAtMaxChargeTimeX.push_back(
-					chargeByStripByTime[strip][timeSliceOfMaxChargeX]);
-		} else {
-			chargeByStripAtMaxChargeTimeY.push_back(
-					chargeByStripByTime[strip][timeSliceOfMaxChargeY]);
+	vector<short> chargeOfStripAtMaxChargeTimeX;
+	vector<short> chargeOfStripAtMaxChargeTimeY;
+	for (unsigned int strip = 0; strip != chargeOfStripOfTime.size(); strip++) {
+		unsigned int apvID = apvIDOfStrip[strip];
+		if (isX(apvID)) { // X axis
+			chargeOfStripAtMaxChargeTimeX.push_back(
+					chargeOfStripOfTime[strip][timeSliceOfMaxChargeX]);
+		} else { // Y axis
+			chargeOfStripAtMaxChargeTimeY.push_back(
+					chargeOfStripOfTime[strip][timeSliceOfMaxChargeY]);
 		}
 	}
 
-	TF1* gaussFitX = fitGauss(chargeByStripAtMaxChargeTimeX, eventNumber,
+	TF1* gaussFitX = fitGauss(chargeOfStripAtMaxChargeTimeX, eventNumber,
 			"maxChargeDistributionX");
-	TF1* gaussFitY = fitGauss(chargeByStripAtMaxChargeTimeY, eventNumber,
+	TF1* gaussFitY = fitGauss(chargeOfStripAtMaxChargeTimeY, eventNumber,
 			"maxChargeDistributionY");
-
 
 //storage after procession
 //Fill trees	(replace 1)
@@ -349,16 +368,20 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		gauss.gaussXcharge = gaussFitX->GetParameter(0);
 		gauss.gaussXchi = gaussFitX->GetChisquare();
 		gauss.gaussXdof = gaussFitX->GetNDF();
-		gauss.gaussXchiRed = gaussFitX->GetChisquare()/gaussFitX->GetNDF();
+		gauss.gaussXchiRed = gaussFitX->GetChisquare() / gaussFitX->GetNDF();
 		gauss.gaussYmean = gaussFitY->GetParameter(1);
 		gauss.gaussYmeanError = gaussFitY->GetParError(1);
 		gauss.gaussYsigma = gaussFitX->GetParameter(2);
 		gauss.gaussYcharge = gaussFitX->GetParameter(0);
 		gauss.gaussYchi = gaussFitY->GetChisquare();
 		gauss.gaussYdof = gaussFitY->GetNDF();
-		gauss.gaussYchiRed = gaussFitY->GetChisquare()/gaussFitY->GetNDF();
+		gauss.gaussYchiRed = gaussFitY->GetChisquare() / gaussFitY->GetNDF();
 		gauss.number = eventNumber;
 
+		/*
+		 * ???
+		 * Was ist hier zu tun?
+		 */
 		maxi.maxXmean = 1;
 		maxi.maxYmean = 1;
 		maxi.maxXcharge = 1;
@@ -369,30 +392,46 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 		general_mapTree["fits"]->Fill();
 
+		/*
+		 * ???
+		 * Was ist hier gefragt? Was ist der unterschied zu mmhitmap
+		 */
 		general_mapHist2D["mmhitmapMaxCut"]->Fill(/*x value*/1,/*y value*/1);
 		general_mapHist2D["mmhitmapGausCut"]->Fill(/*x value*/1,/*y value*/1);
-
 	}
 
-	if (/*condition to fill general histograms*/true) {
-		if (/*condition to fill hitmap*/true) { // coincidence check between x and y signal (within 25ns)
+	if (/*condition to fill general histograms*/gaussFitY != NULL
+			&& gaussFitX != NULL) {
+		// coincidence check between x and y signal (within 25ns)
+		if (/*condition to fill hitmap*/abs(
+				timeSliceOfMaxChargeX - timeSliceOfMaxChargeY) <= 1) {
 			general_mapHist2D["mmhitmap"]->Fill(
 			/*strip with maximum charge in X*/stripWithMaxChargeX,/*strip with maximum charge in Y*/
 			stripWithMaxChargeY);
 		}
-		general_mapHist1D["mmchargex"]->Fill(/*maximum charge x*/1);
-		general_mapHist1D["mmchargey"]->Fill(/*maximum charge y*/1);
-		general_mapHist1D["mmhitx"]->Fill(/*strip x with maximum charge*/1);
-		general_mapHist1D["mmhity"]->Fill(/*strip y with maximum charge*/1);
+
+		general_mapHist1D["mmchargex"]->Fill(/*maximum charge x*/maxChargeX);
+		general_mapHist1D["mmchargey"]->Fill(/*maximum charge y*/maxChargeY);
+		general_mapHist1D["mmhitx"]->Fill(
+		/*strip x with maximum charge*/stripWithMaxChargeX);
+		general_mapHist1D["mmhity"]->Fill(
+		/*strip y with maximum charge*/stripWithMaxChargeY);
+
+		/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		 * !!!!!!!!!!!!!!!!!!!!!! To be implemented!!!!!!!!!!!!!!!!!!!!!!!!!
+		 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		 */
 		general_mapHist1D["mmclusterx"]->Fill(
-		/*number of x strips hit by one event*/1);
+		/*number of x strips hit by one event*/numberOfXHits);
 		general_mapHist1D["mmclustery"]->Fill(
-		/*number of y strips hit by one event*/1);
-		general_mapHist1D["mmtimex"]->Fill(/*time of maximum charge*/1);
-		general_mapHist1D["mmtimey"]->Fill(/*time of maximum charege*/1);
+		/*number of y strips hit by one event*/numberOfYHits);
+
+		general_mapHist1D["mmtimex"]->Fill(
+		/*time of maximum charge x*/timeSliceOfMaxChargeX * 25);
+		general_mapHist1D["mmtimey"]->Fill(
+		/*time of maximum charge y*/timeSliceOfMaxChargeY * 25);
 		eventTimes.push_back(
 				(double) event->time_s + (double) event->time_us / 1e6);
-
 	}
 
 	return true;
@@ -497,7 +536,8 @@ int main(int argc, char *argv[]) {
 		m_TotalEventNumber = m_event->getEventNumber();
 
 		// loop over all events
-		while (m_event->getNextEvent() && eventNumber!=1000) {
+		while (m_event->getNextEvent()
+				&& eventNumber != MAX_NUM_OF_EVENTS_TO_BE_PROCESSED) {
 			if (analyseMMEvent(m_event, eventNumber, TRGBURST) == true) {
 			}
 			eventNumber++;
