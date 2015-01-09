@@ -59,7 +59,7 @@ maxi_t maxi;
 const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
 const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
-const string combinedPlotsFile = "";// Name of the file for the combined results of all runs
+const string combinedPlotsFile = "";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 76-82 für jeden Tag anders war. Es können unter anderem angeschaut werden Raten in abhängigkeit der Spannung
 
 // Mapping of APV-Chips
 const int APVIDMM_X0 = 5;
@@ -73,7 +73,7 @@ const int APVIDMM_Y2 = 2;
 const int xStrips = 360;
 const int yStrips = 360;
 
-//Voltage range, needed for initialization of combined histograms
+//Voltage range, needed for initialization of combined histograms (hier die Schritte von VD und VA angeben (amp stimmt schon)
 const int driftStart = 100;
 const int driftEnd = 400;
 const int driftSteps = 50;
@@ -159,6 +159,8 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 				 * Event eine beliebige Zahl an Strips beinhaltet (Zero suppression?!)
 				 *
 				 * cout << chargeOfStripOfTime.size() << endl;
+				 *
+				 * das funktioniert wohl mit: event->mm_strip->at(i).at(j) oder so
 				 */
 				eventDisplayX->SetBinContent(counterX++/*x*/, timeSlice/*y*/,
 						charge/*z*/);
