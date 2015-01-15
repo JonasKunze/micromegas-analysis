@@ -7,7 +7,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 10000
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 100
 
 /*
  * Cuts
@@ -15,8 +15,9 @@
 // Minimal charge required for the strip with maximum charge
 #define MIN_CHARGE_X 80
 #define MIN_CHARGE_Y 200
+#define MAX_FIT_MEAN_DISTANCE_TO_MAX 5 // Number of strips
 
-#define RUN_FITS false
+#define RUN_FITS true
 
 using namespace std;
 
@@ -183,7 +184,7 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 
 TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 		vector<unsigned int> numberOfStripAtMaxChargeTime, int eventNumber,
-		std::string name) {
+		std::string name, TH1F*& maxChargeDistribution) {
 	// Generate the title of the histogram
 	stringstream histoName;
 	histoName.str("");
@@ -197,10 +198,8 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 	unsigned int lastBin =
 			numberOfStripAtMaxChargeTime[numberOfStripAtMaxChargeTime.size() - 1];
 
-	TH1F *maxChargeDistribution = new TH1F(histoName.str().c_str(),
+	maxChargeDistribution = new TH1F(histoName.str().c_str(),
 			"; strip; charge", lastBin - firstBin + 2, firstBin, lastBin);
-
-	general_mapPlotFit[histoName.str()] = maxChargeDistribution;
 
 	/*
 	 * Fill the histogram
@@ -208,13 +207,15 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 	for (unsigned int strip = 0; strip != chargeOfStripAtMaxChargeTime.size();
 			strip++) {
 		maxChargeDistribution->SetBinContent(
-				strip + 1 /* Bin 0 is underflow bin => +1 */,
+				numberOfStripAtMaxChargeTime[strip]-firstBin + 1 /* Bin 0 is underflow bin => +1 */,
 				chargeOfStripAtMaxChargeTime[strip]);
 	}
 
 	maxChargeDistribution->Fit("gaus", "q");
 
-	return maxChargeDistribution->GetFunction("gaus");
+	TF1* fit = maxChargeDistribution->GetFunction("gaus");
+
+	return fit;
 }
 
 // analysis of single event: characteristics of event and gaussian fit
@@ -309,13 +310,37 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 		TF1* gaussFitX = NULL;
 		TF1* gaussFitY = NULL;
+		TH1F* fitHistoX = NULL;
+		TH1F* fitHistoY = NULL;
 		if (RUN_FITS) {
 			gaussFitX = fitGauss(chargeOfStripAtMaxChargeTimeX,
 					numberOfStripAtMaxChargeTimeX, eventNumber,
-					"maxChargeDistributionX");
+					"maxChargeDistributionX", fitHistoX);
+
+			/*
+			 * Check if the fit mean is close enough to the maximum
+			 */
+			if (gaussFitX != NULL) {
+				double mean = gaussFitX->GetParameter(1);
+				if (abs(stripNumShowingSignal[stripWithMaxChargeX]-mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+					general_mapPlotFit[std::string(fitHistoX->GetName())] = fitHistoX;
+				}
+			}
+
+
 			gaussFitY = fitGauss(chargeOfStripAtMaxChargeTimeY,
 					numberOfStripAtMaxChargeTimeY, eventNumber,
-					"maxChargeDistributionY");
+					"maxChargeDistributionY", fitHistoY);
+
+			/*
+			 * Check if the fit mean is close enough to the maximum
+			 */
+			if (gaussFitY != NULL) {
+				double mean = gaussFitY->GetParameter(1);
+				if (abs(stripNumShowingSignal[stripWithMaxChargeY]-mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+					general_mapPlotFit[std::string(fitHistoY->GetName())] = fitHistoY;
+				}
+			}
 		}
 
 //storage after procession
