@@ -7,13 +7,16 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 1000
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 10000
 
 /*
  * Cuts
  */
-#define MIN_CHARGE_X 0
-#define MIN_CHARGE_Y 0
+// Minimal charge required for the strip with maximum charge
+#define MIN_CHARGE_X 80
+#define MIN_CHARGE_Y 200
+
+#define RUN_FITS false
 
 using namespace std;
 
@@ -195,7 +198,7 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 			numberOfStripAtMaxChargeTime[numberOfStripAtMaxChargeTime.size() - 1];
 
 	TH1F *maxChargeDistribution = new TH1F(histoName.str().c_str(),
-			"; strip; charge", lastBin - firstBin + 1, firstBin, lastBin);
+			"; strip; charge", lastBin - firstBin + 2, firstBin, lastBin);
 
 	general_mapPlotFit[histoName.str()] = maxChargeDistribution;
 
@@ -205,7 +208,7 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 	for (unsigned int strip = 0; strip != chargeOfStripAtMaxChargeTime.size();
 			strip++) {
 		maxChargeDistribution->SetBinContent(
-				numberOfStripAtMaxChargeTime[strip],
+				strip + 1 /* Bin 0 is underflow bin => +1 */,
 				chargeOfStripAtMaxChargeTime[strip]);
 	}
 
@@ -216,84 +219,6 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 
 // analysis of single event: characteristics of event and gaussian fit
 bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
-
-	/*
-	 data variables:
-	 1D vector event->apv_id: 		ID of APV which shows hit (needed to select if hit is in X or Y)
-	 1D vector event->mm_strip:		number of the strip which shows signal
-	 1D vector event->apv_qmax: 	maximum charge of the strip
-	 1D vector event->apv_tbqmax: 	time slice of maximum charge (time = #TimeSlice * 25)
-
-	 access element of 1D vector: eg. event->apv_id->at(i) gives strip data at position i in all vectors correspond to
-
-	 2-D vector event->apv_q: 	matrix with full time characteristics of the signal
-
-	 access element of 2D vector: event->apv_q->at(i).at(j) gives charge at time step j of strip event->apv_id->at(i)
-
-
-	 useful code:
-	 event->apv_q->size() gives size of this vector (size is the same for all 1D vector and first dimension of 2D vector)
-	 event->apv_q->at(i).size() gives number of recorded timesteps
-
-	 list:
-	 type listName[numberofEntries];		//initialize list, number of entries cannot be changed afterwards, type can be int, float, ...
-	 float bla[8];
-	 listName[i];				//access element i of the list
-
-	 vector:
-	 vector<type> vectorName; 		//initialise vector called vectorName, compared to list no fixed lenght, type can be int, float, ...
-	 vectorName.push_back(value);		//append value to vector
-	 vectorName.size();			//returns number of elements in the vector
-	 vectorName.at(i);			//returns element i
-
-	 if:
-	 if(fun>0){
-	 cout << "you should work" << endl;
-	 }else{
-	 cout << "take a break" << endl;
-	 }
-
-	 combined conditions:
-	 condition1 && condition2: 	condition1 AND condition2
-	 condition1 || condition2: 	condition1 OR condition2
-
-
-	 loop:
-	 for(int i=0; i<10; i++){
-	 cout << "Micromegas are great" << endl;
-	 }
-
-	 initialize a histogram with eventnumber in the name:
-	 stringstream nameOfStringstream;
-	 nameOfStringstream.str("");
-	 nameOfStringstream << eventNumber << "nameOfHistogram";  //eg: for eventNumber=10 name will be 10nameOfHistogram
-	 general_mapHist2DEvent[nameOfStringstream.str()] = new TH2F(nameOfStringstream.str().c_str(),";label x-axis; label y-axis",number of bins in x,smallest value x ,largest value x, number of bins in y, smallest value y, largest value x );
-
-	 Gaussian Fit to histogram:
-	 1. initialise histogram and function to store the fit
-	 TH1F *histName = new TH1F("histname",";label label x-axis; label y-axis", number of bins, smallest value, largest value);
-	 TF1 *fitName;
-	 2. fill histogram
-	 histName->SetBinContent(number of bin, value);
-	 3. fit gauss to histogram
-	 histName->Fit("gaus","q");
-	 fitName = histName->GetFunction("gaus");
-	 4. access parameters of the fit
-	 fitName->GetParameter(parameterNumber); 	//parameterNumber for Gaussion fit: 0 = amplitude, 1 = mean, 2 = standard deviation
-	 fitName->GetParError(paramterNumber);
-	 fitName->GetChisquare();
-	 fitName->GetNDF();				//has to be cast to double to fill in tree: (double) fitName->GetNDF();
-
-	 */
-
-	/*TODO:
-	 1. Create 2D Eventdisplay (strips:time:charge)
-	 2. Find maximum charge and store value and corresponding strip, time step, etc.
-	 3. Develop cuts to select good events (check with Eventdisplay)
-	 4. Gaussian fits to charge distribution over strips at timestep with maximum charge
-	 5. store values in designated histograms and trees
-	 */
-
 	//MMQuickEvent *event, int eventNumber, int TRGBURST
 	vector<unsigned int> apvIDOfStrip = *event->apv_id; // isX(apvIDOfStrip[i]) returns true if the i-th strip is X-layer
 	vector<unsigned int> stripNumShowingSignal = *event->mm_strip;
@@ -382,12 +307,16 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			}
 		}
 
-		TF1* gaussFitX = fitGauss(chargeOfStripAtMaxChargeTimeX,
-				numberOfStripAtMaxChargeTimeX, eventNumber,
-				"maxChargeDistributionX");
-		TF1* gaussFitY = fitGauss(chargeOfStripAtMaxChargeTimeY,
-				numberOfStripAtMaxChargeTimeY, eventNumber,
-				"maxChargeDistributionY");
+		TF1* gaussFitX = NULL;
+		TF1* gaussFitY = NULL;
+		if (RUN_FITS) {
+			gaussFitX = fitGauss(chargeOfStripAtMaxChargeTimeX,
+					numberOfStripAtMaxChargeTimeX, eventNumber,
+					"maxChargeDistributionX");
+			gaussFitY = fitGauss(chargeOfStripAtMaxChargeTimeY,
+					numberOfStripAtMaxChargeTimeY, eventNumber,
+					"maxChargeDistributionY");
+		}
 
 //storage after procession
 //Fill trees	(replace 1)
@@ -434,8 +363,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			1);
 		}
 
-		if (/*condition to fill general histograms*/gaussFitY != NULL
-				&& gaussFitX != NULL) {
+		if (/*condition to fill general histograms*/!RUN_FITS
+				|| (gaussFitY != NULL && gaussFitX != NULL)) {
 			// coincidence check between x and y signal (within 25ns)
 			if (/*condition to fill hitmap*/abs(
 					timeSliceOfMaxChargeX - timeSliceOfMaxChargeY) <= 1) {
