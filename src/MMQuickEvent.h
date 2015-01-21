@@ -2,97 +2,178 @@
 #define MMQuickEvent_H
 
 #include "CCommonIncludes.h"
+
 using namespace std;
 
+// Mapping of APV-Chips
+const int APVIDMM_X0 = 5;
+const int APVIDMM_X1 = 4;
+const int APVIDMM_X2 = 6;
+const int APVIDMM_Y0 = 0;
+const int APVIDMM_Y1 = 1;
+const int APVIDMM_Y2 = 2;
+
 class MMQuickEvent {
-	public:
-		MMQuickEvent(vector<string> vecFilenames, string Tree_Name, int NumberOfEvents=10) {
-			m_tchain = new TChain(Tree_Name.c_str());
-			for (unsigned int i=0; i<vecFilenames.size(); i++) {
-				m_tchain->Add(vecFilenames[i].c_str());
-				m_tchain->AddFriend("data", vecFilenames[i].c_str());
-			}
-			cleanVariables();
-			addBranches();
-			m_actEventNumber = 0;
-			m_NumberOfEvents = m_tchain->GetEntries();
-			if (NumberOfEvents!=-1) m_NumberOfEvents = NumberOfEvents;
-			cout<<"[MMQuickEvent] Number of Events loaded: "<<m_NumberOfEvents<<endl;
+public:
+	MMQuickEvent(vector<string> vecFilenames, string Tree_Name,
+			int NumberOfEvents = 10) {
+		m_tchain = new TChain(Tree_Name.c_str());
+		for (unsigned int i = 0; i < vecFilenames.size(); i++) {
+			m_tchain->Add(vecFilenames[i].c_str());
+			m_tchain->AddFriend("data", vecFilenames[i].c_str());
 		}
+		cleanVariables();
+		addBranches();
+		m_actEventNumber = 0;
+		m_NumberOfEvents = m_tchain->GetEntries();
+		if (NumberOfEvents != -1)
+			m_NumberOfEvents = NumberOfEvents;
+		cout << "[MMQuickEvent] Number of Events loaded: " << m_NumberOfEvents
+				<< endl;
+	}
 
-		bool getNextEvent() {
-			if (m_actEventNumber >= m_NumberOfEvents) {
-				cout << endl;
-				return false;
-			}
-			if (m_actEventNumber == 0) cout << "[MMQuickEvent] Looping over Events" << endl;
-			if (m_actEventNumber%(m_NumberOfEvents/100) == 0) {
-				cout << '\r' << "[MMQuickEvent] " << TMath::Nint(m_actEventNumber/((float)m_NumberOfEvents)*100.) << "% done (Event " << m_actEventNumber << "/" << m_NumberOfEvents << ")...";
-				cout.flush();
-			} else if (m_actEventNumber == m_NumberOfEvents-1) {
-				cout << '\r' << "[MMQuickEvent] Done!                              ";
-				cout.flush();
-			}
-			m_tchain->GetEvent(m_actEventNumber);
-			m_actEventNumber++;
+	bool getNextEvent() {
+		if (m_actEventNumber >= m_NumberOfEvents) {
+			cout << endl;
+			return false;
+		}
+		if (m_actEventNumber == 0)
+			cout << "[MMQuickEvent] Looping over Events" << endl;
+		if (m_actEventNumber % (m_NumberOfEvents / 100) == 0) {
+			cout << '\r' << "[MMQuickEvent] "
+					<< TMath::Nint(
+							m_actEventNumber / ((float) m_NumberOfEvents)
+									* 100.) << "% done (Event "
+					<< m_actEventNumber << "/" << m_NumberOfEvents << ")...";
+			cout.flush();
+		} else if (m_actEventNumber == m_NumberOfEvents - 1) {
+			cout << '\r'
+					<< "[MMQuickEvent] Done!                              ";
+			cout.flush();
+		}
+		m_tchain->GetEvent(m_actEventNumber);
+		m_actEventNumber++;
+		return true;
+	}
+
+	void cleanVariables() {
+		apv_fecNo = 0;
+		apv_id = 0;
+		apv_ch = 0;
+		mm_id = 0;
+		mm_readout = 0;
+		mm_strip = 0;
+		apv_q = 0;
+
+		apv_qmax = 0;
+		apv_tbqmax = 0;
+	}
+
+	double getEventNumber() {
+		return m_NumberOfEvents;
+	}
+
+	void addBranches() {
+		m_tchain->SetBranchAddress("apv_evt", &apv_evt);
+		m_tchain->SetBranchAddress("time_s", &time_s);
+		m_tchain->SetBranchAddress("time_us", &time_us);
+		m_tchain->SetBranchAddress("apv_fecNo", &apv_fecNo);
+		m_tchain->SetBranchAddress("apv_id", &apv_id);
+		m_tchain->SetBranchAddress("apv_ch", &apv_ch);
+		m_tchain->SetBranchAddress("mm_id", &mm_id);
+		m_tchain->SetBranchAddress("mm_readout", &mm_readout);
+		m_tchain->SetBranchAddress("mm_strip", &mm_strip);
+		m_tchain->SetBranchAddress("apv_q", &apv_q);
+		m_tchain->SetBranchAddress("apv_presamples", &apv_presamples);
+
+		m_tchain->SetBranchAddress("apv_qmax", &apv_qmax);
+		m_tchain->SetBranchAddress("apv_tbqmax", &apv_tbqmax);
+	}
+
+
+
+	// functions to select if hit is in X or Y according to APV ID and mapping while data acquisition
+	static bool isX(int id) {
+		if (id == APVIDMM_X0 || id == APVIDMM_X1 || id == APVIDMM_X2) {
 			return true;
+		} else {
+			return false;
 		}
+	}
 
-		void cleanVariables() {
-			apv_fecNo = 0;
-			apv_id = 0;
-			apv_ch = 0;
-			mm_id = 0;
-			mm_readout = 0;
-			mm_strip = 0;
-			apv_q = 0;
-
-			apv_qmax = 0;
-			apv_tbqmax = 0;
+	static bool isY(int id) {
+		if (id == APVIDMM_Y0 || id == APVIDMM_Y1 || id == APVIDMM_Y2) {
+			return true;
+		} else {
+			return false;
 		}
+	}
 
-		double getEventNumber() {
-			return m_NumberOfEvents;
+public:
+	TChain *m_tchain;
+	int m_actEventNumber;
+	int m_NumberOfEvents;
+
+	/// Event Information
+	// Declaration of leaf types
+	UInt_t apv_evt;
+	Int_t time_s;
+	Int_t time_us;
+	vector<unsigned int> *apv_fecNo;
+	vector<unsigned int> *apv_id;
+	vector<unsigned int> *apv_ch;
+	vector<string> *mm_id;
+	vector<unsigned int> *mm_readout;
+	vector<unsigned int> *mm_strip;
+	vector<vector<short> > *apv_q;
+	UInt_t apv_presamples;
+
+	vector<short> *apv_qmax;
+	vector<short> *apv_tbqmax;
+
+	short maxChargeX = 0;
+	int stripWithMaxChargeX = 0;
+	int timeSliceOfMaxChargeX = 0;
+	short maxChargeY = 0;
+	int stripWithMaxChargeY = 0;
+	int timeSliceOfMaxChargeY = 0;
+
+	unsigned short numberOfXHits = 0;
+	unsigned short numberOfYHits = 0;
+
+	void findMaxCharge() {
+
+		vector<unsigned int> apvIDofStrip = *apv_id; // isX(apvIDofStrip[i]) returns true if the i-th strip is X-layer
+		vector<unsigned int> stripNumShowingSignal = *mm_strip; // stripNumShowingSignal[i] is absolute strip number (strips without charge are not stored anywhere)
+		vector<vector<short> > chargeOfStripOfTime = *apv_q; // chargeOfStripOfTime[i][j] is the charge of strip i in time slice j (matrix of whole event)
+		vector<short> maxChargeOfStrip = *apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time slices
+		vector<short> timeSliceOfMaxChargeOfStrip = *apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time slice of the corresponding maximum charge (see above)
+
+		/*
+		 * Iterate through all strips and check if it is X or Y data. Compare the maximum charge
+		 * of the strip with the maximum charge found so far for the current axis. Store current charge, strip number
+		 * and time slice with the maximum charge if the current charge is larger than before.
+		 */
+		for (unsigned int strip = 1; strip != maxChargeOfStrip.size();
+				strip++) {
+			unsigned int apvID = apvIDofStrip[strip];
+			if (isX(apvID)) { // X axis
+				numberOfXHits++;
+				if (maxChargeOfStrip[strip] > maxChargeX) {
+					maxChargeX = maxChargeOfStrip[strip];
+					stripWithMaxChargeX = strip;
+					timeSliceOfMaxChargeX = timeSliceOfMaxChargeOfStrip[strip];
+				}
+			} else { // Y axis
+				numberOfYHits++;
+				if (maxChargeOfStrip[strip] > maxChargeY) {
+					maxChargeY = maxChargeOfStrip[strip];
+					stripWithMaxChargeY = strip;
+					timeSliceOfMaxChargeY = timeSliceOfMaxChargeOfStrip[strip];
+				}
+			}
 		}
-
-		void addBranches() {
-			m_tchain->SetBranchAddress("apv_evt", &apv_evt);
-			m_tchain->SetBranchAddress("time_s", &time_s);
-			m_tchain->SetBranchAddress("time_us", &time_us);
-			m_tchain->SetBranchAddress("apv_fecNo", &apv_fecNo);
-			m_tchain->SetBranchAddress("apv_id", &apv_id);
-			m_tchain->SetBranchAddress("apv_ch", &apv_ch);
-			m_tchain->SetBranchAddress("mm_id", &mm_id);
-			m_tchain->SetBranchAddress("mm_readout", &mm_readout);
-			m_tchain->SetBranchAddress("mm_strip", &mm_strip);
-			m_tchain->SetBranchAddress("apv_q", &apv_q);
-			m_tchain->SetBranchAddress("apv_presamples", &apv_presamples);
-
-			m_tchain->SetBranchAddress("apv_qmax", &apv_qmax);
-			m_tchain->SetBranchAddress("apv_tbqmax", &apv_tbqmax);
-		}
-
-	public:
-		TChain 					*m_tchain;
-		int 					m_actEventNumber;
-		int 					m_NumberOfEvents;
-
-		/// Event Information
-		// Declaration of leaf types
-		UInt_t					apv_evt;
-		Int_t					time_s;
-		Int_t					time_us;
-		vector<unsigned int> 	*apv_fecNo;
-		vector<unsigned int> 	*apv_id;
-		vector<unsigned int> 	*apv_ch;
-		vector<string> 			*mm_id;
-		vector<unsigned int> 	*mm_readout;
-		vector<unsigned int> 	*mm_strip;
-		vector<vector<short> > 	*apv_q;
-		UInt_t 					apv_presamples;
-
-		vector<short>			*apv_qmax;
-		vector<short>			*apv_tbqmax;
+	}
 };
 
 #endif
