@@ -17,183 +17,187 @@ using namespace std;
 class MapFile {
 private:
 	void createFile() {
-		m_mapFile["VD50VA500"] = new TFile(
-				(path + appendName + "_VD50VA500.root").c_str(),
-				(Option_t*) "RECREATE");
+		// Erster Tag
+//		m_mapFile["VD50VA500"] = new TFile(
+//				(path + appendName + "_VD50VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
 		m_mapFile["VD125VA500"] = new TFile(
 				(path + appendName + "_VD125VA500.root").c_str(),
 				(Option_t*) "RECREATE");
-		m_mapFile["VD200VA500"] = new TFile(
-				(path + appendName + "_VD200VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD275VA500"] = new TFile(
-				(path + appendName + "_VD275VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD350VA500"] = new TFile(
-				(path + appendName + "_VD350VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD50VA525"] = new TFile(
-				(path + appendName + "_VD50VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD125VA525"] = new TFile(
-				(path + appendName + "_VD125VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD200VA525"] = new TFile(
-				(path + appendName + "_VD200VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD275VA525"] = new TFile(
-				(path + appendName + "_VD275VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD350VA525"] = new TFile(
-				(path + appendName + "_VD350VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD50VA550"] = new TFile(
-				(path + appendName + "_VD50VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD125VA550"] = new TFile(
-				(path + appendName + "_VD125VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD200VA550"] = new TFile(
-				(path + appendName + "_VD200VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD275VA550"] = new TFile(
-				(path + appendName + "_VD275VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD350VA550"] = new TFile(
-				(path + appendName + "_VD350VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD172VA500"] = new TFile(
-				(path + appendName + "_VD172VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD430VA500"] = new TFile(
-				(path + appendName + "_VD430VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD688VA500"] = new TFile(
-				(path + appendName + "_VD688VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD947VA500"] = new TFile(
-				(path + appendName + "_VD947VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD1205VA500"] = new TFile(
-				(path + appendName + "_VD1205VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD172VA525"] = new TFile(
-				(path + appendName + "_VD172VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD430VA525"] = new TFile(
-				(path + appendName + "_VD430VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD688VA525"] = new TFile(
-				(path + appendName + "_VD688VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD947VA525"] = new TFile(
-				(path + appendName + "_VD947VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD1205VA525"] = new TFile(
-				(path + appendName + "_VD1205VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD172VA550"] = new TFile(
-				(path + appendName + "_VD172VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD430VA550"] = new TFile(
-				(path + appendName + "_VD430VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD688VA550"] = new TFile(
-				(path + appendName + "_VD688VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD947VA550"] = new TFile(
-				(path + appendName + "_VD947VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD117VA500"] = new TFile(
-				(path + appendName + "_VD117VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD291VA500"] = new TFile(
-				(path + appendName + "_VD291VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD467VA500"] = new TFile(
-				(path + appendName + "_VD467VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD642VA500"] = new TFile(
-				(path + appendName + "_VD642VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD817VA500"] = new TFile(
-				(path + appendName + "_VD817VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD117VA525"] = new TFile(
-				(path + appendName + "_VD117VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD291VA525"] = new TFile(
-				(path + appendName + "_VD291VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD467VA525"] = new TFile(
-				(path + appendName + "_VD467VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD642VA525"] = new TFile(
-				(path + appendName + "_VD642VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD817VA525"] = new TFile(
-				(path + appendName + "_VD817VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD117VA550"] = new TFile(
-				(path + appendName + "_VD117VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD291VA550"] = new TFile(
-				(path + appendName + "_VD291VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD467VA550"] = new TFile(
-				(path + appendName + "_VD467VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD642VA550"] = new TFile(
-				(path + appendName + "_VD642VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD817VA550"] = new TFile(
-				(path + appendName + "_VD817VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD89VA500"] = new TFile(
-				(path + appendName + "_VD89VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD222VA500"] = new TFile(
-				(path + appendName + "_VD222VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD355VA500"] = new TFile(
-				(path + appendName + "_VD355VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD488VA500"] = new TFile(
-				(path + appendName + "_VD488VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD622VA500"] = new TFile(
-				(path + appendName + "_VD622VA500.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD89VA525"] = new TFile(
-				(path + appendName + "_VD89VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD222VA525"] = new TFile(
-				(path + appendName + "_VD222VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD355VA525"] = new TFile(
-				(path + appendName + "_VD355VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD488VA525"] = new TFile(
-				(path + appendName + "_VD488VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD622VA525"] = new TFile(
-				(path + appendName + "_VD622VA525.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD89VA550"] = new TFile(
-				(path + appendName + "_VD89VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD222VA550"] = new TFile(
-				(path + appendName + "_VD222VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD355VA550"] = new TFile(
-				(path + appendName + "_VD355VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD488VA550"] = new TFile(
-				(path + appendName + "_VD488VA550.root").c_str(),
-				(Option_t*) "RECREATE");
-		m_mapFile["VD622VA550"] = new TFile(
-				(path + appendName + "_VD622VA550.root").c_str(),
-				(Option_t*) "RECREATE");
+//		m_mapFile["VD200VA500"] = new TFile(
+//				(path + appendName + "_VD200VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD275VA500"] = new TFile(
+//				(path + appendName + "_VD275VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD350VA500"] = new TFile(
+//				(path + appendName + "_VD350VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD50VA525"] = new TFile(
+//				(path + appendName + "_VD50VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD125VA525"] = new TFile(
+//				(path + appendName + "_VD125VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD200VA525"] = new TFile(
+//				(path + appendName + "_VD200VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD275VA525"] = new TFile(
+//				(path + appendName + "_VD275VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD350VA525"] = new TFile(
+//				(path + appendName + "_VD350VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD50VA550"] = new TFile(
+//				(path + appendName + "_VD50VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD125VA550"] = new TFile(
+//				(path + appendName + "_VD125VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD200VA550"] = new TFile(
+//				(path + appendName + "_VD200VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD275VA550"] = new TFile(
+//				(path + appendName + "_VD275VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD350VA550"] = new TFile(
+//				(path + appendName + "_VD350VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+
+// Zweiter Tag
+
+//		m_mapFile["VD172VA500"] = new TFile(
+//				(path + appendName + "_VD172VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD430VA500"] = new TFile(
+//				(path + appendName + "_VD430VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD688VA500"] = new TFile(
+//				(path + appendName + "_VD688VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD947VA500"] = new TFile(
+//				(path + appendName + "_VD947VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD1205VA500"] = new TFile(
+//				(path + appendName + "_VD1205VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD172VA525"] = new TFile(
+//				(path + appendName + "_VD172VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD430VA525"] = new TFile(
+//				(path + appendName + "_VD430VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD688VA525"] = new TFile(
+//				(path + appendName + "_VD688VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD947VA525"] = new TFile(
+//				(path + appendName + "_VD947VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD1205VA525"] = new TFile(
+//				(path + appendName + "_VD1205VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD172VA550"] = new TFile(
+//				(path + appendName + "_VD172VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD430VA550"] = new TFile(
+//				(path + appendName + "_VD430VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD688VA550"] = new TFile(
+//				(path + appendName + "_VD688VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD947VA550"] = new TFile(
+//				(path + appendName + "_VD947VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD117VA500"] = new TFile(
+//				(path + appendName + "_VD117VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD291VA500"] = new TFile(
+//				(path + appendName + "_VD291VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD467VA500"] = new TFile(
+//				(path + appendName + "_VD467VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD642VA500"] = new TFile(
+//				(path + appendName + "_VD642VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD817VA500"] = new TFile(
+//				(path + appendName + "_VD817VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD117VA525"] = new TFile(
+//				(path + appendName + "_VD117VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD291VA525"] = new TFile(
+//				(path + appendName + "_VD291VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD467VA525"] = new TFile(
+//				(path + appendName + "_VD467VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD642VA525"] = new TFile(
+//				(path + appendName + "_VD642VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD817VA525"] = new TFile(
+//				(path + appendName + "_VD817VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD117VA550"] = new TFile(
+//				(path + appendName + "_VD117VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD291VA550"] = new TFile(
+//				(path + appendName + "_VD291VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD467VA550"] = new TFile(
+//				(path + appendName + "_VD467VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD642VA550"] = new TFile(
+//				(path + appendName + "_VD642VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD817VA550"] = new TFile(
+//				(path + appendName + "_VD817VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD89VA500"] = new TFile(
+//				(path + appendName + "_VD89VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD222VA500"] = new TFile(
+//				(path + appendName + "_VD222VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD355VA500"] = new TFile(
+//				(path + appendName + "_VD355VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD488VA500"] = new TFile(
+//				(path + appendName + "_VD488VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD622VA500"] = new TFile(
+//				(path + appendName + "_VD622VA500.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD89VA525"] = new TFile(
+//				(path + appendName + "_VD89VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD222VA525"] = new TFile(
+//				(path + appendName + "_VD222VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD355VA525"] = new TFile(
+//				(path + appendName + "_VD355VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD488VA525"] = new TFile(
+//				(path + appendName + "_VD488VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD622VA525"] = new TFile(
+//				(path + appendName + "_VD622VA525.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD89VA550"] = new TFile(
+//				(path + appendName + "_VD89VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD222VA550"] = new TFile(
+//				(path + appendName + "_VD222VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD355VA550"] = new TFile(
+//				(path + appendName + "_VD355VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD488VA550"] = new TFile(
+//				(path + appendName + "_VD488VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
+//		m_mapFile["VD622VA550"] = new TFile(
+//				(path + appendName + "_VD622VA550.root").c_str(),
+//				(Option_t*) "RECREATE");
 	}
 
 public:

@@ -63,6 +63,17 @@ public:
 		}
 		m_tchain->GetEvent(m_actEventNumber);
 		m_actEventNumber++;
+
+		maxChargeX = 0;
+		stripWithMaxChargeX = 0;
+		timeSliceOfMaxChargeX = 0;
+		maxChargeY = 0;
+		stripWithMaxChargeY = 0;
+		timeSliceOfMaxChargeY = 0;
+
+		numberOfXHits = 0;
+		numberOfYHits = 0;
+
 		return true;
 	}
 
@@ -79,7 +90,7 @@ public:
 		apv_tbqmax = 0;
 	}
 
-	double getEventNumber() {
+	int getEventNumber() {
 		return m_NumberOfEvents;
 	}
 
@@ -99,6 +110,7 @@ public:
 		m_tchain->SetBranchAddress("apv_qmax", &apv_qmax);
 		m_tchain->SetBranchAddress("apv_tbqmax", &apv_tbqmax);
 	}
+
 
 	// functions to select if hit is in X or Y according to APV ID and mapping while data acquisition
 	static bool isX(int id) {
@@ -148,6 +160,41 @@ public:
 
 	unsigned short numberOfXHits;
 	unsigned short numberOfYHits;
+
+	vector<short> chargeOfStripAtMaxChargeTimeX; // charges of all strips at fixed time slice (being the maximum charge time)
+	vector<short> chargeOfStripAtMaxChargeTimeY;
+	vector<unsigned int> numberOfStripAtMaxChargeTimeX; // absolute strip number of all strips
+	vector<unsigned int> numberOfStripAtMaxChargeTimeY;
+
+	void generateFixTimeCrossSection() {
+		/*
+		 * Store the charge values of every strip number for the time slice with
+		 * the maximum charge found in one event for X and Y separately (cross section
+		 * for time slices with max charge)
+		 */
+
+		chargeOfStripAtMaxChargeTimeX.clear();
+		chargeOfStripAtMaxChargeTimeY.clear();
+		numberOfStripAtMaxChargeTimeX.clear();
+		numberOfStripAtMaxChargeTimeY.clear();
+
+		// Iterate through all strips
+		for (unsigned int strip = 0; strip != (*apv_q).size();
+				strip++) {
+			unsigned int apvID = (*apv_id)[strip];
+			if (MMQuickEvent::isX(apvID)) { // X axis
+				chargeOfStripAtMaxChargeTimeX.push_back(
+						(*apv_q)[strip][timeSliceOfMaxChargeX]);
+				numberOfStripAtMaxChargeTimeX.push_back(
+						(*mm_strip)[strip]);
+			} else { // Y axis
+				chargeOfStripAtMaxChargeTimeY.push_back(
+						(*apv_q)[strip][timeSliceOfMaxChargeY]);
+				numberOfStripAtMaxChargeTimeY.push_back(
+						(*mm_strip)[strip]);
+			}
+		}
+	}
 
 	void findMaxCharge() {
 

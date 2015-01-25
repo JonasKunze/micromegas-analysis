@@ -8,7 +8,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 100
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 1000
 
 /*
  * Cuts
@@ -181,7 +181,7 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 	}
 
 	// fit histrogram maxChargeDistribution with Gaussian distribution
-	maxChargeDistribution->Fit("gaus", "Sq");
+	maxChargeDistribution->Fit("gaus", "Sq", NULL, 0, 10);
 
 	// return result of Gaussian fit
 	return maxChargeDistribution->GetFunction("gaus");
@@ -219,40 +219,15 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	// first data cut: remove events with small charge
 	if (event->maxChargeX > MIN_CHARGE_X && event->maxChargeY > MIN_CHARGE_Y) {
-		/*
-		 * Store the charge values of every strip number for the time slice with
-		 * the maximum charge found in one event for X and Y separately (cross section
-		 * for time slices with max charge)
-		 */
-		vector<short> chargeOfStripAtMaxChargeTimeX; // charges of all strips at fixed time slice (being the maximum charge time)
-		vector<short> chargeOfStripAtMaxChargeTimeY;
-		vector<unsigned int> numberOfStripAtMaxChargeTimeX; // absolute strip number of all strips
-		vector<unsigned int> numberOfStripAtMaxChargeTimeY;
 
-		// Iterate through all strips
-		for (unsigned int strip = 0; strip != chargeOfStripOfTime.size();
-				strip++) {
-			unsigned int apvID = apvIDofStrip[strip];
-			if (MMQuickEvent::isX(apvID)) { // X axis
-				chargeOfStripAtMaxChargeTimeX.push_back(
-						chargeOfStripOfTime[strip][event->timeSliceOfMaxChargeX]);
-				numberOfStripAtMaxChargeTimeX.push_back(
-						stripNumShowingSignal[strip]);
-			} else { // Y axis
-				chargeOfStripAtMaxChargeTimeY.push_back(
-						chargeOfStripOfTime[strip][event->timeSliceOfMaxChargeY]);
-				numberOfStripAtMaxChargeTimeY.push_back(
-						stripNumShowingSignal[strip]);
-			}
-		}
-
+		event->generateFixTimeCrossSection();
 		TF1* gaussFitX = NULL;
 		TF1* gaussFitY = NULL;
 		TH1F* fitHistoX = NULL;
 		TH1F* fitHistoY = NULL;
 		if (RUN_FITS) {
-			gaussFitX = fitGauss(chargeOfStripAtMaxChargeTimeX,
-					numberOfStripAtMaxChargeTimeX, eventNumber,
+			gaussFitX = fitGauss(event->chargeOfStripAtMaxChargeTimeX,
+					event->numberOfStripAtMaxChargeTimeX, eventNumber,
 					"maxChargeDistributionX", fitHistoX);
 			/*
 			 * Check if the fit mean is close enough to the maximum
@@ -261,14 +236,14 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				double mean = gaussFitX->GetParameter(1);
 				if (abs(
 						stripNumShowingSignal[event->stripWithMaxChargeX]
-								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+								- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 					general_mapPlotFit[std::string(fitHistoX->GetName())] =
 							fitHistoX;
 				}
 			}
 
-			gaussFitY = fitGauss(chargeOfStripAtMaxChargeTimeY,
-					numberOfStripAtMaxChargeTimeY, eventNumber,
+			gaussFitY = fitGauss(event->chargeOfStripAtMaxChargeTimeY,
+					event->numberOfStripAtMaxChargeTimeY, eventNumber,
 					"maxChargeDistributionY", fitHistoY);
 
 			/*
@@ -278,7 +253,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				double mean = gaussFitY->GetParameter(1);
 				if (abs(
 						stripNumShowingSignal[event->stripWithMaxChargeY]
-								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+								- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 					general_mapPlotFit[std::string(fitHistoY->GetName())] =
 							fitHistoY;
 				}
@@ -310,8 +285,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			 * ???
 			 * Was ist hier zu tun?
 			 */
-			maxi.maxXmean = 1;
-			maxi.maxYmean = 1;
+			maxi.maxXmean = event->maxChargeX;
+			maxi.maxYmean = event->maxChargeY;
 			maxi.maxXcharge = 1;
 			maxi.maxYcharge = 1;
 			maxi.maxXcluster = 1;
