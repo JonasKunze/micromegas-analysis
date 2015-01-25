@@ -8,14 +8,16 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 1000
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 10000
 
 /*
  * Cuts
  */
 // Minimal charge required for the strip with maximum charge
-#define MIN_CHARGE_X 80
-#define MIN_CHARGE_Y 200
+#define MIN_CHARGE_X 0
+#define MIN_CHARGE_Y 0
+
+#define FIT_RANGE 20
 #define MAX_FIT_MEAN_DISTANCE_TO_MAX 5 // Number of strips
 
 #define RUN_FITS true
@@ -30,6 +32,7 @@ map<string, TH2F*> general_mapHist2D;	//2D histogram of analysis for each run
 map<string, TH2F*> general_mapHist2DEvent; 	//plot of 2D EventDisplay
 map<string, TH1F*> general_mapPlotFit;		//plot of fits
 map<string, TH2F*> general_mapCombined;		//combined Plots
+map<string, TH1F*> general_mapCombined1D;
 
 Double_t m_TotalEventNumber;
 vector<double> eventTimes;
@@ -68,7 +71,8 @@ maxi_t maxi;
 
 //set output path and name of output files
 const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
-const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
+//const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
+const string outPath = "/tmp/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
 const string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war. Es können unter anderem angeschaut werden Raten in abhängigkeit der Spannung
 
@@ -148,7 +152,8 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 
 TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 		vector<unsigned int> numberOfStripAtMaxChargeTime, int eventNumber,
-		std::string name, TH1F* &maxChargeDistribution) {
+		std::string name, TH1F* &maxChargeDistribution, int startFitRange,
+		int endFitRange) {
 	// Generate the title of the histogram
 	stringstream histoName;
 	histoName.str("");
@@ -159,29 +164,24 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 		return NULL;
 	}
 
-	// Draw histogram between first and last bin with any charge
-	unsigned int firstBin = numberOfStripAtMaxChargeTime[0];
-	unsigned int lastBin =
-			numberOfStripAtMaxChargeTime[numberOfStripAtMaxChargeTime.size() - 1];
-
 	maxChargeDistribution = new TH1F(histoName.str().c_str(), "; strip; charge",
-			lastBin - firstBin + 2, firstBin, lastBin);
+			xStrips, 0, xStrips);
 
 	// No idea why...but this needs to be done...Damn root
-	maxChargeDistribution->SetDirectory(0);
-	TH1::AddDirectory(kFALSE);
+//	maxChargeDistribution->SetDirectory(0);
+//	TH1::AddDirectory(kFALSE);
 
 	// Fill the histogram
 	for (unsigned int strip = 0; strip != chargeOfStripAtMaxChargeTime.size();
 			strip++) {
 		maxChargeDistribution->SetBinContent(
-				numberOfStripAtMaxChargeTime[strip] - firstBin
+				numberOfStripAtMaxChargeTime[strip]
 						+ 1 /* Bin 0 is underflow bin => +1 */,
 				chargeOfStripAtMaxChargeTime[strip]);
 	}
 
 	// fit histrogram maxChargeDistribution with Gaussian distribution
-	maxChargeDistribution->Fit("gaus", "Sq", NULL, 0, 10);
+	maxChargeDistribution->Fit("gaus", "Sq", NULL, startFitRange, endFitRange);
 
 	// return result of Gaussian fit
 	return maxChargeDistribution->GetFunction("gaus");
@@ -228,7 +228,12 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		if (RUN_FITS) {
 			gaussFitX = fitGauss(event->chargeOfStripAtMaxChargeTimeX,
 					event->numberOfStripAtMaxChargeTimeX, eventNumber,
-					"maxChargeDistributionX", fitHistoX);
+					"maxChargeDistributionX", fitHistoX,
+					stripNumShowingSignal[event->stripWithMaxChargeX]
+							- FIT_RANGE / 2,
+					stripNumShowingSignal[event->stripWithMaxChargeX]
+							+ FIT_RANGE / 2);
+
 			/*
 			 * Check if the fit mean is close enough to the maximum
 			 */
@@ -236,15 +241,22 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				double mean = gaussFitX->GetParameter(1);
 				if (abs(
 						stripNumShowingSignal[event->stripWithMaxChargeX]
-								- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 					general_mapPlotFit[std::string(fitHistoX->GetName())] =
 							fitHistoX;
+				} else {
+					delete fitHistoX;
+					fitHistoX=NULL;
 				}
 			}
 
 			gaussFitY = fitGauss(event->chargeOfStripAtMaxChargeTimeY,
 					event->numberOfStripAtMaxChargeTimeY, eventNumber,
-					"maxChargeDistributionY", fitHistoY);
+					"maxChargeDistributionY", fitHistoY,
+					stripNumShowingSignal[event->stripWithMaxChargeY]
+							- FIT_RANGE / 2,
+					stripNumShowingSignal[event->stripWithMaxChargeY]
+							+ FIT_RANGE / 2);
 
 			/*
 			 * Check if the fit mean is close enough to the maximum
@@ -253,16 +265,19 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				double mean = gaussFitY->GetParameter(1);
 				if (abs(
 						stripNumShowingSignal[event->stripWithMaxChargeY]
-								- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 					general_mapPlotFit[std::string(fitHistoY->GetName())] =
 							fitHistoY;
+				} else {
+					delete fitHistoY;
+					fitHistoY=NULL;
 				}
 			}
 		}
 
 //storage after procession
 //Fill trees	(replace 1)
-		if (/*condition to store the fit*/gaussFitY != NULL && gaussFitX != NULL) {
+		if (/*condition to store the fit*/fitHistoY != NULL && fitHistoX != NULL) {
 			gauss.gaussXmean = gaussFitX->GetParameter(1);
 			gauss.gaussXmeanError = gaussFitX->GetParError(1);
 			gauss.gaussXsigma = gaussFitX->GetParameter(2);
@@ -315,6 +330,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 						/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
 						stripNumShowingSignal[event->stripWithMaxChargeY]);
 			}
+
+			general_mapCombined1D["chargexAllEvents"]->Fill(event->maxChargeX);
+			general_mapCombined1D["chargeyAllEvents"]->Fill(event->maxChargeY);
 
 			general_mapHist1D["mmchargex"]->Fill(
 			/*maximum charge x*/event->maxChargeX);
@@ -385,9 +403,18 @@ int main(int argc, char *argv[]) {
 			(ampEnd - ampStart) / ampSteps + 1, ampStart - 0.5 * ampSteps,
 			ampEnd + 0.5 * ampSteps);
 
+	general_mapCombined1D["chargexAllEvents"] = new TH1F("chargexAllEvents",
+			";charge X; entries", 100, 0, 1000);
+	general_mapCombined1D["chargeyAllEvents"] = new TH1F("chargeyAllEvents",
+			";charge Y; entries", 100, 0, 1000);
+
 // iterate of different runs in the map
+	int runNumber = 0;
 	for (map<string, TFile*>::const_iterator Fitr(mapFile.begin());
 			Fitr != mapFile.end(); ++Fitr) {
+
+		std::cout << "Reading File " << ++runNumber << " out of "
+				<< mapFile.size() << std::endl;
 
 		int eventNumber = 0; //initialisation of counting variable for later use
 
@@ -493,7 +520,7 @@ int main(int argc, char *argv[]) {
 						/ driftSteps + 1,
 				(atoi(Fitr->first.substr(7, 3).c_str()) - ampStart) / ampSteps
 						+ 1,/*insert here number of events*/
-				1 / lengthOfMeasurement);
+				eventNumber / lengthOfMeasurement);
 		general_mapCombined["saturatedX"]->SetBinContent(
 				(atoi(Fitr->first.substr(2, 3).c_str()) - driftStart)
 						/ driftSteps + 1,
@@ -528,13 +555,13 @@ int main(int argc, char *argv[]) {
 				iter != general_mapHist1D.end(); iter++) {
 			iter->second->SetOption("error");
 			iter->second->Write();
-//			delete iter->second;
+			delete iter->second;
 		}
 		for (map<string, TH2F*>::iterator iter = general_mapHist2D.begin();
 				iter != general_mapHist2D.end(); iter++) {
 			iter->second->SetOption("error");
 			iter->second->Write();
-//			delete iter->second;
+			delete iter->second;
 		}
 		gDirectory->mkdir("2D_Events");
 		gDirectory->cd("2D_Events");
@@ -542,7 +569,7 @@ int main(int argc, char *argv[]) {
 				iter != general_mapHist2DEvent.end(); iter++) {
 			iter->second->SetOption("error");
 			iter->second->Write();
-//			delete iter->second;
+			delete iter->second;
 		}
 		gDirectory->cd("..");
 		gDirectory->mkdir("Fits");
@@ -551,6 +578,7 @@ int main(int argc, char *argv[]) {
 				iter != general_mapPlotFit.end(); iter++) {
 			iter->second->SetName(iter->first.c_str());
 			iter->second->Write();
+			// Bugfix: I get a segmentation violation if
 //			delete iter->second;
 		}
 		gDirectory->cd("..");
@@ -559,7 +587,7 @@ int main(int argc, char *argv[]) {
 		for (map<string, TTree*>::iterator iter = general_mapTree.begin();
 				iter != general_mapTree.end(); iter++) {
 			iter->second->Write();
-//			delete iter->second;
+			delete iter->second;
 		}
 		file0->Close();
 
@@ -573,6 +601,11 @@ int main(int argc, char *argv[]) {
 	fileCombined->cd();
 	for (map<string, TH2F*>::iterator iter = general_mapCombined.begin();
 			iter != general_mapCombined.end(); iter++) {
+		iter->second->Write();
+		delete iter->second;
+	}
+	for (map<string, TH1F*>::iterator iter = general_mapCombined1D.begin();
+			iter != general_mapCombined1D.end(); iter++) {
 		iter->second->Write();
 		delete iter->second;
 	}
