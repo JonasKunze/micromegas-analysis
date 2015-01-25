@@ -2,7 +2,8 @@
 #include "MMQuickEvent.h"
 #include "MapFile.h"
 #include "TGraphErrors.h"
-
+#include "TFitResultPtr.h"
+#include "TFitResult.h"
 /*
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
@@ -166,6 +167,10 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 	maxChargeDistribution = new TH1F(histoName.str().c_str(), "; strip; charge",
 			lastBin - firstBin + 2, firstBin, lastBin);
 
+	// No idea why...but this needs to be done...Damn root
+	maxChargeDistribution->SetDirectory(0);
+	TH1::AddDirectory(kFALSE);
+
 	// Fill the histogram
 	for (unsigned int strip = 0; strip != chargeOfStripAtMaxChargeTime.size();
 			strip++) {
@@ -176,7 +181,7 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 	}
 
 	// fit histrogram maxChargeDistribution with Gaussian distribution
-	maxChargeDistribution->Fit("gaus", "q");
+	maxChargeDistribution->Fit("gaus", "Sq");
 
 	// return result of Gaussian fit
 	return maxChargeDistribution->GetFunction("gaus");
@@ -184,8 +189,6 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 
 // analysis of single event: characteristics of event and Gaussian fit
 bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
-	std::cout << "Processing Event " << eventNumber << std::endl;
-
 	// declaration of helping variables to more easily access event data
 	vector<unsigned int> apvIDofStrip = *event->apv_id; // MMQuickEvent::isX(apvIDofStrip[i]) returns true if the i-th strip is X-layer
 	vector<unsigned int> stripNumShowingSignal = *event->mm_strip; // stripNumShowingSignal[i] is absolute strip number (strips without charge are not stored anywhere)
@@ -251,20 +254,16 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			gaussFitX = fitGauss(chargeOfStripAtMaxChargeTimeX,
 					numberOfStripAtMaxChargeTimeX, eventNumber,
 					"maxChargeDistributionX", fitHistoX);
-
 			/*
 			 * Check if the fit mean is close enough to the maximum
 			 */
 			if (gaussFitX != NULL) {
 				double mean = gaussFitX->GetParameter(1);
-				std::cout << "!!!!" << gaussFitX->GetNumberFreeParameters() << std::endl;
 				if (abs(
 						stripNumShowingSignal[event->stripWithMaxChargeX]
 								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 					general_mapPlotFit[std::string(fitHistoX->GetName())] =
 							fitHistoX;
-				} else {
-					delete fitHistoX;
 				}
 			}
 
@@ -282,8 +281,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 					general_mapPlotFit[std::string(fitHistoY->GetName())] =
 							fitHistoY;
-				} else {
-					delete fitHistoY;
 				}
 			}
 		}
@@ -556,13 +553,13 @@ int main(int argc, char *argv[]) {
 				iter != general_mapHist1D.end(); iter++) {
 			iter->second->SetOption("error");
 			iter->second->Write();
-			delete iter->second;
+//			delete iter->second;
 		}
 		for (map<string, TH2F*>::iterator iter = general_mapHist2D.begin();
 				iter != general_mapHist2D.end(); iter++) {
 			iter->second->SetOption("error");
 			iter->second->Write();
-			delete iter->second;
+//			delete iter->second;
 		}
 		gDirectory->mkdir("2D_Events");
 		gDirectory->cd("2D_Events");
@@ -570,7 +567,7 @@ int main(int argc, char *argv[]) {
 				iter != general_mapHist2DEvent.end(); iter++) {
 			iter->second->SetOption("error");
 			iter->second->Write();
-			delete iter->second;
+//			delete iter->second;
 		}
 		gDirectory->cd("..");
 		gDirectory->mkdir("Fits");
@@ -579,7 +576,7 @@ int main(int argc, char *argv[]) {
 				iter != general_mapPlotFit.end(); iter++) {
 			iter->second->SetName(iter->first.c_str());
 			iter->second->Write();
-			delete iter->second;
+//			delete iter->second;
 		}
 		gDirectory->cd("..");
 		gDirectory->mkdir("Trees");
@@ -587,7 +584,7 @@ int main(int argc, char *argv[]) {
 		for (map<string, TTree*>::iterator iter = general_mapTree.begin();
 				iter != general_mapTree.end(); iter++) {
 			iter->second->Write();
-			delete iter->second;
+//			delete iter->second;
 		}
 		file0->Close();
 
