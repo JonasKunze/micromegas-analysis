@@ -30,6 +30,16 @@ public:
 			m_NumberOfEvents = NumberOfEvents;
 		cout << "[MMQuickEvent] Number of Events loaded: " << m_NumberOfEvents
 				<< endl;
+
+		maxChargeX = 0;
+		stripWithMaxChargeX = 0;
+		timeSliceOfMaxChargeX = 0;
+		maxChargeY = 0;
+		stripWithMaxChargeY = 0;
+		timeSliceOfMaxChargeY = 0;
+
+		numberOfXHits = 0;
+		numberOfYHits = 0;
 	}
 
 	bool getNextEvent() {
@@ -90,8 +100,6 @@ public:
 		m_tchain->SetBranchAddress("apv_tbqmax", &apv_tbqmax);
 	}
 
-
-
 	// functions to select if hit is in X or Y according to APV ID and mapping while data acquisition
 	static bool isX(int id) {
 		if (id == APVIDMM_X0 || id == APVIDMM_X1 || id == APVIDMM_X2) {
@@ -131,15 +139,15 @@ public:
 	vector<short> *apv_qmax;
 	vector<short> *apv_tbqmax;
 
-	short maxChargeX = 0;
-	int stripWithMaxChargeX = 0;
-	int timeSliceOfMaxChargeX = 0;
-	short maxChargeY = 0;
-	int stripWithMaxChargeY = 0;
-	int timeSliceOfMaxChargeY = 0;
+	short maxChargeX;
+	int stripWithMaxChargeX;
+	int timeSliceOfMaxChargeX;
+	short maxChargeY;
+	int stripWithMaxChargeY;
+	int timeSliceOfMaxChargeY;
 
-	unsigned short numberOfXHits = 0;
-	unsigned short numberOfYHits = 0;
+	unsigned short numberOfXHits;
+	unsigned short numberOfYHits;
 
 	void findMaxCharge() {
 

@@ -69,9 +69,7 @@ maxi_t maxi;
 const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
 const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
-const string combinedPlotsFile = "";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 76-82 für jeden Tag anders war. Es können unter anderem angeschaut werden Raten in abhängigkeit der Spannung
-
-
+const string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war. Es können unter anderem angeschaut werden Raten in abhängigkeit der Spannung
 
 //number of strips in x and y
 const int xStrips = 360;
@@ -135,11 +133,13 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 			if (MMQuickEvent::isX(apvID)) {
 
 				// store charge of current strip in bin corresponding to absolute strip number
-				eventDisplayX->SetBinContent(event->mm_strip->at(stripNum)+1/*x*/,
-						timeSlice+1/*y*/, charge/*z*/);
+				eventDisplayX->SetBinContent(
+						event->mm_strip->at(stripNum) + 1/*x*/,
+						timeSlice + 1/*y*/, charge/*z*/);
 			} else {
-				eventDisplayY->SetBinContent(event->mm_strip->at(stripNum)+1/*x*/,
-						timeSlice+1/*y*/, charge/*z*/);
+				eventDisplayY->SetBinContent(
+						event->mm_strip->at(stripNum) + 1/*x*/,
+						timeSlice + 1/*y*/, charge/*z*/);
 			}
 		}
 	}
@@ -184,6 +184,7 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 
 // analysis of single event: characteristics of event and Gaussian fit
 bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
+	std::cout << "Processing Event " << eventNumber << std::endl;
 
 	// declaration of helping variables to more easily access event data
 	vector<unsigned int> apvIDofStrip = *event->apv_id; // MMQuickEvent::isX(apvIDofStrip[i]) returns true if the i-th strip is X-layer
@@ -256,11 +257,14 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			 */
 			if (gaussFitX != NULL) {
 				double mean = gaussFitX->GetParameter(1);
+				std::cout << "!!!!" << gaussFitX->GetNumberFreeParameters() << std::endl;
 				if (abs(
 						stripNumShowingSignal[event->stripWithMaxChargeX]
 								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 					general_mapPlotFit[std::string(fitHistoX->GetName())] =
 							fitHistoX;
+				} else {
+					delete fitHistoX;
 				}
 			}
 
@@ -278,6 +282,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 					general_mapPlotFit[std::string(fitHistoY->GetName())] =
 							fitHistoY;
+				} else {
+					delete fitHistoY;
 				}
 			}
 		}
@@ -331,7 +337,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				|| (gaussFitY != NULL && gaussFitX != NULL)) {
 			// coincidence check between x and y signal (within 25ns)
 			if (/*condition to fill hitmap*/abs(
-					event->timeSliceOfMaxChargeX - event->timeSliceOfMaxChargeY) <= 1) {
+					event->timeSliceOfMaxChargeX - event->timeSliceOfMaxChargeY)
+					<= 1) {
 				general_mapHist2D["mmhitmap"]->Fill(
 						/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
 						stripNumShowingSignal[event->stripWithMaxChargeY]);
@@ -472,34 +479,36 @@ int main(int argc, char *argv[]) {
 			eventNumber++;
 		}
 
-		// fill dtime + rate hist
-		vector<double> ratesOverMeasurementTime;
 		float lengthOfMeasurement = 0.;
-		sort(eventTimes.begin(), eventTimes.end());
-		float tempTime = eventTimes.at(0);
-		float tempDeltaTime = 0.;
-		float timePeriod = 30.; // time period for rate hist (10 s)
-		int periodCount = 0;
-		int beginOfTimePeriod = 0;
-		double lastTime = eventTimes.at(0);
-		for (int e = 1; e < eventTimes.size(); e++) { // start at 1 because first is already loaded
-			float deltaTime = eventTimes.at(e) - lastTime;
-			if (deltaTime < 1000.) { // to get malformed events out
-				general_mapHist1D["mmdtime"]->Fill(deltaTime);
-				lengthOfMeasurement += deltaTime;
-				tempDeltaTime += deltaTime;
-				if (tempDeltaTime >= timePeriod) {
-					ratesOverMeasurementTime.push_back(e - beginOfTimePeriod);
-					general_mapHist1D["mmrate"]->Fill(
-							(e - beginOfTimePeriod) / tempDeltaTime);
-					periodCount++;
-					beginOfTimePeriod = e;
-					tempDeltaTime = 0.;
+		if (!eventTimes.empty()) {
+			// fill dtime + rate hist
+			vector<double> ratesOverMeasurementTime;
+			sort(eventTimes.begin(), eventTimes.end());
+			float tempDeltaTime = 0.;
+			float timePeriod = 30.; // time period for rate hist (10 s)
+			int periodCount = 0;
+			int beginOfTimePeriod = 0;
+			double lastTime = eventTimes.at(0);
+			for (int e = 1; e < eventTimes.size(); e++) { // start at 1 because first is already loaded
+				float deltaTime = eventTimes.at(e) - lastTime;
+				if (deltaTime < 1000.) { // to get malformed events out
+					general_mapHist1D["mmdtime"]->Fill(deltaTime);
+					lengthOfMeasurement += deltaTime;
+					tempDeltaTime += deltaTime;
+					if (tempDeltaTime >= timePeriod) {
+						ratesOverMeasurementTime.push_back(
+								e - beginOfTimePeriod);
+						general_mapHist1D["mmrate"]->Fill(
+								(e - beginOfTimePeriod) / tempDeltaTime);
+						periodCount++;
+						beginOfTimePeriod = e;
+						tempDeltaTime = 0.;
+					}
 				}
+				lastTime = eventTimes.at(e);
 			}
-			lastTime = eventTimes.at(e);
+			eventTimes.clear(); // clear vector for next measurment
 		}
-		eventTimes.clear(); // clear vector for next measurment
 
 		//delete m_event to clear cache
 		delete m_event;
@@ -585,6 +594,9 @@ int main(int argc, char *argv[]) {
 		//end of processing of one run
 	}
 
+	gDirectory->cd("..");
+	gDirectory->mkdir("Combined");
+	gDirectory->cd("Combined");
 //save combined plots
 	fileCombined->cd();
 	for (map<string, TH2F*>::iterator iter = general_mapCombined.begin();
