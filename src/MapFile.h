@@ -21,9 +21,36 @@ using namespace std;
 
 class MapFile {
 private:
+	static std::vector<std::pair<int, int>> neighbourStripeLimitsX;
+	static std::vector<std::pair<int, int>> neighbourStripeLimitsY;
+public:
+	/**
+	 * returns a vector storing at position N the minimal proportion of the N+1-th neighbour strip of the strip with the maximum charge
+	 *
+	 * 100*charge[max+d]/charge[max]>getMinimalMaxHitNeighbourProportion()[d-1]
+	 */
+	static std::vector<std::pair<int, int>> getProportionLimitsOfMaxHitNeighboursX() {
+		return neighbourStripeLimitsX;
+	}
+
+	static std::vector<std::pair<int, int>> getProportionLimitsOfMaxHitNeighboursY() {
+		return neighbourStripeLimitsY;
+	}
+
+private:
 	void createFile() {
 		if (driftGap == 4.5) {
 			// Erster Tag
+			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
+			neighbourStripeLimitsX.push_back(std::make_pair(5, 50));
+			neighbourStripeLimitsX.push_back(std::make_pair(0, 25));
+
+			neighbourStripeLimitsY.push_back(std::make_pair(45, 100));
+			neighbourStripeLimitsY.push_back(std::make_pair(20, 50));
+			neighbourStripeLimitsY.push_back(std::make_pair(5, 30));
+			neighbourStripeLimitsY.push_back(std::make_pair(0, 20));
+			neighbourStripeLimitsY.push_back(std::make_pair(0, 10));
+
 			m_mapFile["VD50VA500"] = new TFile(
 					(path + appendName + "_VD50VA500.root").c_str(),
 					(Option_t*) "RECREATE");
@@ -218,7 +245,8 @@ public:
 		this->data_dir = data_dir;
 		this->path = path;
 		this->appendName = appendName;
-		driftGap = DRIFT_GAP;
+		driftGap = DRIFT_GAP
+		;
 		createFile();
 	}
 
@@ -226,7 +254,7 @@ public:
 		return m_mapFile;
 	}
 
-	double getDriftGap(){
+	double getDriftGap() {
 		return driftGap;
 	}
 
@@ -369,7 +397,7 @@ private:
 	string data_dir; // was "../../PhD/Detector/micromega_data/" before
 	string path;
 	string appendName;
-	double driftGap;
+	static double driftGap;
 };
 
 #endif

@@ -2,6 +2,7 @@
 #define MMQuickEvent_H
 
 #include "CCommonIncludes.h"
+#include "MapFile.h"
 
 using namespace std;
 
@@ -177,6 +178,9 @@ public:
 	vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimeX; // absolute strip number and charges of all strips at fixed time slice (being the maximum charge time)
 	vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimeY;
 
+	/**
+	 * Returns true if the neighbour strips of the strip with maximum charge are within a given range
+	 */
 	bool generateFixedTimeCrossSection(TH2F* maxNeighbourHistoX, TH2F* maxNeighbourHistoY) {
 		/*
 		 * Store the charge values of every strip number for the time slice with
@@ -229,6 +233,8 @@ public:
 				break;
 			}
 		}
+
+		MapFile::getMinimalMaxHitNeighbourProportion();
 
 		for (int deltaStrip = -NumberOfMaxHitNeighboursToBeStored;
 				deltaStrip <= NumberOfMaxHitNeighboursToBeStored; deltaStrip++) {
