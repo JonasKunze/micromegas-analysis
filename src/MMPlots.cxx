@@ -71,8 +71,8 @@ maxi_t maxi;
 
 //set output path and name of output files
 const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
-//const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
-const string outPath = "/tmp/"; // Path of the Output
+const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
+//const string outPath = "/tmp/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
 const string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war. Es können unter anderem angeschaut werden Raten in abhängigkeit der Spannung
 
@@ -87,6 +87,13 @@ const int driftSteps = 50;
 const int ampStart = 500;
 const int ampEnd = 550;
 const int ampSteps = 25;
+
+bool storeHistogram(int eventNumber) {
+	return ((MAX_NUM_OF_EVENTS_TO_BE_PROCESSED == -1 && eventNumber % 1000 == 0) /* every 1000th */
+			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 100
+					&& eventNumber % (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED / 100)
+							== 0) || MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 100);
+}
 
 /**
  * Generates a new 2D histogram (heatmap) showing all measured charges in all strips of x or y direction of all times slices.
@@ -152,8 +159,8 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 
 TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 		vector<unsigned int> numberOfStripAtMaxChargeTime, int eventNumber,
-		std::string name, TH1F* &maxChargeDistribution, int startFitRange,
-		int endFitRange) {
+		std::string name, TH1F* &maxChargeDistribution,
+		unsigned int startFitRange, unsigned int endFitRange) {
 	// Generate the title of the histogram
 	stringstream histoName;
 	histoName.str("");
@@ -165,7 +172,7 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 	}
 
 	maxChargeDistribution = new TH1F(histoName.str().c_str(), "; strip; charge",
-			xStrips, 0, xStrips);
+			endFitRange - startFitRange + 2, startFitRange, endFitRange);
 
 	// No idea why...but this needs to be done...Damn root
 //	maxChargeDistribution->SetDirectory(0);
@@ -174,22 +181,26 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 	// Fill the histogram
 	for (unsigned int strip = 0; strip != chargeOfStripAtMaxChargeTime.size();
 			strip++) {
-		maxChargeDistribution->SetBinContent(
-				numberOfStripAtMaxChargeTime[strip]
-						+ 1 /* Bin 0 is underflow bin => +1 */,
-				chargeOfStripAtMaxChargeTime[strip]);
+		if (numberOfStripAtMaxChargeTime[strip] >= startFitRange
+				&& numberOfStripAtMaxChargeTime[strip] <= endFitRange) {
+			maxChargeDistribution->SetBinContent(
+					numberOfStripAtMaxChargeTime[strip] - startFitRange
+							+ 1 /* Bin 0 is underflow bin => +1 */,
+					chargeOfStripAtMaxChargeTime[strip]);
+		}
 	}
 
-	// fit histrogram maxChargeDistribution with Gaussian distribution
+// fit histrogram maxChargeDistribution with Gaussian distribution
 	maxChargeDistribution->Fit("gaus", "Sq", NULL, startFitRange, endFitRange);
 
-	// return result of Gaussian fit
+// return result of Gaussian fit
 	return maxChargeDistribution->GetFunction("gaus");
 }
 
 // analysis of single event: characteristics of event and Gaussian fit
 bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
-	// declaration of helping variables to more easily access event data
+
+// declaration of helping variables to more easily access event data
 	vector<unsigned int> apvIDofStrip = *event->apv_id; // MMQuickEvent::isX(apvIDofStrip[i]) returns true if the i-th strip is X-layer
 	vector<unsigned int> stripNumShowingSignal = *event->mm_strip; // stripNumShowingSignal[i] is absolute strip number (strips without charge are not stored anywhere)
 	vector<vector<short> > chargeOfStripOfTime = *event->apv_q; // chargeOfStripOfTime[i][j] is the charge of strip i in time slice j (matrix of whole event)
@@ -199,13 +210,19 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	/*
 	 * 1. Create event display
 	 *
+	 * Reduce the number of event display to a reasonable number
 	 */
-	generateEventDisplay(event, eventNumber);
+	if ((MAX_NUM_OF_EVENTS_TO_BE_PROCESSED == -1 && eventNumber % 1000 == 0) /* every 1000th */
+			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 100
+					&& eventNumber % (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED / 100)
+							== 0) || MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 100) {
+		generateEventDisplay(event, eventNumber);
+	}
 
 	/*
 	 * 2. Find maximum charge
 	 */
-	event->findMaxCharge();
+	event->findMaxCharge(general_mapHist2D["mmhitneightbours"]);
 
 	/*
 	 * zu cuts: 1. eventdisplays anschauen, erste überlegungen zu cuts
@@ -217,7 +234,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 * 4. Gaussian fits to charge distribution over strips at timestep with maximum charge
 	 */
 
-	// first data cut: remove events with small charge
+// first data cut: remove events with small charge
+	bool fitAccepted = false;
 	if (event->maxChargeX > MIN_CHARGE_X && event->maxChargeY > MIN_CHARGE_Y) {
 
 		event->generateFixTimeCrossSection();
@@ -226,11 +244,13 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		TH1F* fitHistoX = NULL;
 		TH1F* fitHistoY = NULL;
 		if (RUN_FITS) {
+			int startFitRange =
+					stripNumShowingSignal[event->stripWithMaxChargeX]
+							- FIT_RANGE / 2;
 			gaussFitX = fitGauss(event->chargeOfStripAtMaxChargeTimeX,
 					event->numberOfStripAtMaxChargeTimeX, eventNumber,
 					"maxChargeDistributionX", fitHistoX,
-					stripNumShowingSignal[event->stripWithMaxChargeX]
-							- FIT_RANGE / 2,
+					startFitRange > 0 ? startFitRange : 0,
 					stripNumShowingSignal[event->stripWithMaxChargeX]
 							+ FIT_RANGE / 2);
 
@@ -242,11 +262,14 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				if (abs(
 						stripNumShowingSignal[event->stripWithMaxChargeX]
 								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
-					general_mapPlotFit[std::string(fitHistoX->GetName())] =
-							fitHistoX;
+					if (storeHistogram(eventNumber)) {
+						general_mapPlotFit[std::string(fitHistoX->GetName())] =
+								fitHistoX;
+					}
+					fitAccepted = true;
 				} else {
 					delete fitHistoX;
-					fitHistoX=NULL;
+					fitHistoX = NULL;
 				}
 			}
 
@@ -266,18 +289,22 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				if (abs(
 						stripNumShowingSignal[event->stripWithMaxChargeY]
 								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
-					general_mapPlotFit[std::string(fitHistoY->GetName())] =
-							fitHistoY;
+					if (storeHistogram(eventNumber)) {
+						general_mapPlotFit[std::string(fitHistoY->GetName())] =
+								fitHistoY;
+					}
 				} else {
 					delete fitHistoY;
-					fitHistoY=NULL;
+					fitHistoY = NULL;
+					fitAccepted = false;
 				}
 			}
 		}
 
 //storage after procession
 //Fill trees	(replace 1)
-		if (/*condition to store the fit*/fitHistoY != NULL && fitHistoX != NULL) {
+		if (/*condition to store the fit*/fitAccepted && fitHistoY != NULL
+				&& fitHistoX != NULL && gaussFitY != NULL && gaussFitX != NULL) {
 			gauss.gaussXmean = gaussFitX->GetParameter(1);
 			gauss.gaussXmeanError = gaussFitX->GetParError(1);
 			gauss.gaussXsigma = gaussFitX->GetParameter(2);
@@ -452,6 +479,10 @@ int main(int argc, char *argv[]) {
 				";x [strips]; y [strips]", xStrips * 4, 0, xStrips, yStrips * 4,
 				0, yStrips);
 
+		general_mapHist2D["mmhitneightbours"] = new TH2F("mmhitneightbours",
+				";distance [strips]; relative charge [% of max]", 20, 1, 20, 21,
+				0, 100);
+
 		//initialize trees with structure defined above
 		TTree* fitTree = new TTree("T", "results of gauss fit");
 
@@ -578,8 +609,8 @@ int main(int argc, char *argv[]) {
 				iter != general_mapPlotFit.end(); iter++) {
 			iter->second->SetName(iter->first.c_str());
 			iter->second->Write();
-			// Bugfix: I get a segmentation violation if
-//			delete iter->second;
+			delete iter->second;
+			general_mapPlotFit.erase(iter->first);
 		}
 		gDirectory->cd("..");
 		gDirectory->mkdir("Trees");

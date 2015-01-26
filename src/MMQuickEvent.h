@@ -13,6 +13,8 @@ const int APVIDMM_Y0 = 0;
 const int APVIDMM_Y1 = 1;
 const int APVIDMM_Y2 = 2;
 
+const int NumberOfMaxHitNeighboursToBeStored = 5;
+
 class MMQuickEvent {
 public:
 	MMQuickEvent(vector<string> vecFilenames, string Tree_Name,
@@ -111,7 +113,6 @@ public:
 		m_tchain->SetBranchAddress("apv_tbqmax", &apv_tbqmax);
 	}
 
-
 	// functions to select if hit is in X or Y according to APV ID and mapping while data acquisition
 	static bool isX(int id) {
 		if (id == APVIDMM_X0 || id == APVIDMM_X1 || id == APVIDMM_X2) {
@@ -179,24 +180,21 @@ public:
 		numberOfStripAtMaxChargeTimeY.clear();
 
 		// Iterate through all strips
-		for (unsigned int strip = 0; strip != (*apv_q).size();
-				strip++) {
+		for (unsigned int strip = 0; strip != (*apv_q).size(); strip++) {
 			unsigned int apvID = (*apv_id)[strip];
 			if (MMQuickEvent::isX(apvID)) { // X axis
 				chargeOfStripAtMaxChargeTimeX.push_back(
 						(*apv_q)[strip][timeSliceOfMaxChargeX]);
-				numberOfStripAtMaxChargeTimeX.push_back(
-						(*mm_strip)[strip]);
+				numberOfStripAtMaxChargeTimeX.push_back((*mm_strip)[strip]);
 			} else { // Y axis
 				chargeOfStripAtMaxChargeTimeY.push_back(
 						(*apv_q)[strip][timeSliceOfMaxChargeY]);
-				numberOfStripAtMaxChargeTimeY.push_back(
-						(*mm_strip)[strip]);
+				numberOfStripAtMaxChargeTimeY.push_back((*mm_strip)[strip]);
 			}
 		}
 	}
 
-	void findMaxCharge() {
+	void findMaxCharge(TH2F* maxNeighbourHisto) {
 
 		vector<unsigned int> apvIDofStrip = *apv_id; // isX(apvIDofStrip[i]) returns true if the i-th strip is X-layer
 		vector<unsigned int> stripNumShowingSignal = *mm_strip; // stripNumShowingSignal[i] is absolute strip number (strips without charge are not stored anywhere)
@@ -204,6 +202,8 @@ public:
 		vector<short> maxChargeOfStrip = *apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time slices
 		vector<short> timeSliceOfMaxChargeOfStrip = *apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time slice of the corresponding maximum charge (see above)
 
+		std::map<unsigned int, unsigned short> chargesOfAllStripsX;
+		std::map<unsigned int, unsigned short> chargesOfAllStripsY;
 		/*
 		 * Iterate through all strips and check if it is X or Y data. Compare the maximum charge
 		 * of the strip with the maximum charge found so far for the current axis. Store current charge, strip number
@@ -219,6 +219,8 @@ public:
 					stripWithMaxChargeX = strip;
 					timeSliceOfMaxChargeX = timeSliceOfMaxChargeOfStrip[strip];
 				}
+				chargesOfAllStripsX[stripNumShowingSignal[strip]] =
+						maxChargeOfStrip[strip];
 			} else { // Y axis
 				numberOfYHits++;
 				if (maxChargeOfStrip[strip] > maxChargeY) {
@@ -226,6 +228,32 @@ public:
 					stripWithMaxChargeY = strip;
 					timeSliceOfMaxChargeY = timeSliceOfMaxChargeOfStrip[strip];
 				}
+				chargesOfAllStripsY[stripNumShowingSignal[strip]] =
+						maxChargeOfStrip[strip];
+			}
+		}
+
+		for (int delta = -NumberOfMaxHitNeighboursToBeStored;
+				delta < NumberOfMaxHitNeighboursToBeStored; delta++) {
+
+			if (delta == 0) {
+				// don't store the maxim strip itself
+				continue;
+			}
+
+			int stripX = timeSliceOfMaxChargeOfStrip[stripWithMaxChargeX]
+					+ delta;
+			int stripY = timeSliceOfMaxChargeOfStrip[stripWithMaxChargeY]
+					+ delta;
+
+			if (chargesOfAllStripsX.find(stripX) != chargesOfAllStripsX.end()) {
+				maxNeighbourHisto->Fill(abs(delta),
+						100*(double)chargesOfAllStripsX[stripX]/maxChargeX );
+
+			}
+			if (chargesOfAllStripsY.find(stripY) != chargesOfAllStripsY.end()) {
+				maxNeighbourHisto->Fill(abs(delta),
+						100*(double)chargesOfAllStripsY[stripY]/maxChargeY);
 			}
 		}
 	}
