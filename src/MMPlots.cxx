@@ -8,7 +8,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 10000
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 1000
 
 /*
  * Cuts
@@ -88,18 +88,23 @@ const int ampStart = 500;
 const int ampEnd = 550;
 const int ampSteps = 25;
 
+/**
+ * Returns true for every Nth eventNumber so that about 100-200 times true is returned for any number of events
+ */
 bool storeHistogram(int eventNumber) {
-	return ((MAX_NUM_OF_EVENTS_TO_BE_PROCESSED == -1 && eventNumber % 1000 == 0) /* every 1000th */
+	return ((MAX_NUM_OF_EVENTS_TO_BE_PROCESSED < 0 && eventNumber % 5000 == 0) /* every 5000th */
 			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 100
 					&& eventNumber % (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED / 100)
-							== 0) || MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 100);
+							== 0)
+			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 0
+					&& MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 100));
 }
 
 /**
  * Generates a new 2D histogram (heatmap) showing all measured charges in all strips of x or y direction of all times slices.
  * The histogram will be stored at general_mapHist2DEvent[eventNumber+"nameOfHistogram"]
  */
-void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
+void generateEventDisplay(MMQuickEvent* event) {
 	vector<vector<short> > chargeOfTimeOfStrip = *event->apv_q;
 	unsigned int numberOfTimeSlices = chargeOfTimeOfStrip[0].size();
 
@@ -110,7 +115,7 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 	// Generate the title of the histogram
 	stringstream histoName;
 	histoName.str("");
-	histoName << eventNumber << "-Eventdisplay";
+	histoName << event->getCurrentEventNumber() << "-Eventdisplay";
 
 	string histoNameX = histoName.str() + "_X";
 	string histoNameY = histoName.str() + "_Y";
@@ -157,9 +162,9 @@ void generateEventDisplay(MMQuickEvent* event, int eventNumber) {
 	}
 }
 
-TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
-		vector<unsigned int> numberOfStripAtMaxChargeTime, int eventNumber,
-		std::string name, TH1F* &maxChargeDistribution,
+TF1* fitGauss(
+		vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimes,
+		int eventNumber, std::string name, TH1F* &maxChargeDistribution,
 		unsigned int startFitRange, unsigned int endFitRange) {
 	// Generate the title of the histogram
 	stringstream histoName;
@@ -167,7 +172,7 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 	histoName << eventNumber << name;
 
 	// check if any hit has been passed
-	if (chargeOfStripAtMaxChargeTime.empty()) {
+	if (stripAndChargeAtMaxChargeTimes.empty()) {
 		return NULL;
 	}
 
@@ -179,14 +184,14 @@ TF1* fitGauss(vector<short> chargeOfStripAtMaxChargeTime,
 //	TH1::AddDirectory(kFALSE);
 
 	// Fill the histogram
-	for (unsigned int strip = 0; strip != chargeOfStripAtMaxChargeTime.size();
+	for (unsigned int strip = 0; strip != stripAndChargeAtMaxChargeTimes.size();
 			strip++) {
-		if (numberOfStripAtMaxChargeTime[strip] >= startFitRange
-				&& numberOfStripAtMaxChargeTime[strip] <= endFitRange) {
+		if (stripAndChargeAtMaxChargeTimes[strip].first >= startFitRange
+				&& stripAndChargeAtMaxChargeTimes[strip].first <= endFitRange) {
 			maxChargeDistribution->SetBinContent(
-					numberOfStripAtMaxChargeTime[strip] - startFitRange
+					stripAndChargeAtMaxChargeTimes[strip].first - startFitRange
 							+ 1 /* Bin 0 is underflow bin => +1 */,
-					chargeOfStripAtMaxChargeTime[strip]);
+					stripAndChargeAtMaxChargeTimes[strip].second);
 		}
 	}
 
@@ -212,17 +217,14 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 *
 	 * Reduce the number of event display to a reasonable number
 	 */
-	if ((MAX_NUM_OF_EVENTS_TO_BE_PROCESSED == -1 && eventNumber % 1000 == 0) /* every 1000th */
-			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 100
-					&& eventNumber % (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED / 100)
-							== 0) || MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 100) {
-		generateEventDisplay(event, eventNumber);
+	if (storeHistogram(event->getCurrentEventNumber())) {
+		generateEventDisplay(event);
 	}
 
 	/*
 	 * 2. Find maximum charge
 	 */
-	event->findMaxCharge(general_mapHist2D["mmhitneightbours"]);
+	event->findMaxCharge();
 
 	/*
 	 * zu cuts: 1. eventdisplays anschauen, erste überlegungen zu cuts
@@ -238,7 +240,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	bool fitAccepted = false;
 	if (event->maxChargeX > MIN_CHARGE_X && event->maxChargeY > MIN_CHARGE_Y) {
 
-		event->generateFixTimeCrossSection();
+		event->generateFixedTimeCrossSection(
+				general_mapCombined["mmhitneighboursX"],
+				general_mapCombined["mmhitneighboursY"]);
 		TF1* gaussFitX = NULL;
 		TF1* gaussFitY = NULL;
 		TH1F* fitHistoX = NULL;
@@ -247,9 +251,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			int startFitRange =
 					stripNumShowingSignal[event->stripWithMaxChargeX]
 							- FIT_RANGE / 2;
-			gaussFitX = fitGauss(event->chargeOfStripAtMaxChargeTimeX,
-					event->numberOfStripAtMaxChargeTimeX, eventNumber,
-					"maxChargeDistributionX", fitHistoX,
+			gaussFitX = fitGauss(event->stripAndChargeAtMaxChargeTimeX,
+					eventNumber, "maxChargeDistributionX", fitHistoX,
 					startFitRange > 0 ? startFitRange : 0,
 					stripNumShowingSignal[event->stripWithMaxChargeX]
 							+ FIT_RANGE / 2);
@@ -265,6 +268,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 					if (storeHistogram(eventNumber)) {
 						general_mapPlotFit[std::string(fitHistoX->GetName())] =
 								fitHistoX;
+					} else {
+						delete fitHistoX;
+						fitHistoX = NULL;
 					}
 					fitAccepted = true;
 				} else {
@@ -273,9 +279,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				}
 			}
 
-			gaussFitY = fitGauss(event->chargeOfStripAtMaxChargeTimeY,
-					event->numberOfStripAtMaxChargeTimeY, eventNumber,
-					"maxChargeDistributionY", fitHistoY,
+			gaussFitY = fitGauss(event->stripAndChargeAtMaxChargeTimeY,
+					eventNumber, "maxChargeDistributionY", fitHistoY,
 					stripNumShowingSignal[event->stripWithMaxChargeY]
 							- FIT_RANGE / 2,
 					stripNumShowingSignal[event->stripWithMaxChargeY]
@@ -292,6 +297,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 					if (storeHistogram(eventNumber)) {
 						general_mapPlotFit[std::string(fitHistoY->GetName())] =
 								fitHistoY;
+					} else {
+						delete fitHistoY;
+						fitHistoY = NULL;
 					}
 				} else {
 					delete fitHistoY;
@@ -407,7 +415,12 @@ int main(int argc, char *argv[]) {
 	double firstXBinValue = driftStart - 0.5 * driftSteps;
 	double lastXBinValue = driftEnd + 0.5 * driftSteps;
 
-	TFile* fileCombined = new TFile((outPath + combinedPlotsFile).c_str(),
+	std::stringstream combinedFileName;
+	combinedFileName << outPath << MicroMegas->getDriftGap()
+			<< combinedPlotsFile;
+
+	std::cout << combinedFileName.str() << std::endl;
+	TFile* fileCombined = new TFile(combinedFileName.str().c_str(),
 			(Option_t*) "RECREATE");
 	general_mapCombined["rate"] = new TH2F("rate", ";V_Drift ;V_Amp",
 			numberOfXBins, firstXBinValue, lastXBinValue,
@@ -429,6 +442,14 @@ int main(int argc, char *argv[]) {
 			numberOfXBins, firstXBinValue, lastXBinValue,
 			(ampEnd - ampStart) / ampSteps + 1, ampStart - 0.5 * ampSteps,
 			ampEnd + 0.5 * ampSteps);
+
+	general_mapCombined["mmhitneighboursX"] = new TH2F("mmhitneighboursX",
+			";distance [strips]; relative charge [% of max]", 21, -10, 10, 21,
+			0, 100);
+
+	general_mapCombined["mmhitneighboursY"] = new TH2F("mmhitneighboursY",
+			";distance [strips]; relative charge [% of max]", 21, -10, 10, 21,
+			0, 100);
 
 	general_mapCombined1D["chargexAllEvents"] = new TH1F("chargexAllEvents",
 			";charge X; entries", 100, 0, 1000);
@@ -478,10 +499,6 @@ int main(int argc, char *argv[]) {
 		general_mapHist2D["mmhitmapGausCut"] = new TH2F("mmhitmapGausCut",
 				";x [strips]; y [strips]", xStrips * 4, 0, xStrips, yStrips * 4,
 				0, yStrips);
-
-		general_mapHist2D["mmhitneightbours"] = new TH2F("mmhitneightbours",
-				";distance [strips]; relative charge [% of max]", 20, 1, 20, 21,
-				0, 100);
 
 		//initialize trees with structure defined above
 		TTree* fitTree = new TTree("T", "results of gauss fit");
