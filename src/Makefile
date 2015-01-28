@@ -18,8 +18,8 @@ PWD = $(shell pwd)
 	$(CXX) $(CXXFLAGS) $(ROOTCFLAGS) $(INCLUDEFLAGS) -c $<
 
 all: $(PROGS)
-	$(CXX) MMPlots.cxx $(CXXFLAGS) $(ROOTCFLAGS) $(INCLUDEFLAGS) -c $<
-	$(LD) -o MMPlots MMPlots.o $(ROOTLIBS)
+	$(CXX) MapFile.cxx MMPlots.cxx $(CXXFLAGS) $(ROOTCFLAGS) $(INCLUDEFLAGS) -c $<
+	$(LD) -o MMPlots MMPlots.o MapFile.o $(ROOTLIBS)
 clean:
 	export PROGS=$(PROGRAMS);
 	-rm MMPlots *.o *~
