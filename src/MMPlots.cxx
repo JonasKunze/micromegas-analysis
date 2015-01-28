@@ -10,6 +10,8 @@
  */
 #define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 1000
 
+#define NUMBER_OF_EVENT_DISPLAY 1000
+
 /*
  * Cuts
  */
@@ -18,7 +20,7 @@
 #define MIN_CHARGE_Y 0
 
 #define FIT_RANGE 20
-#define MAX_FIT_MEAN_DISTANCE_TO_MAX 5 // Number of strips
+#define MAX_FIT_MEAN_DISTANCE_TO_MAX 50 // Number of strips
 
 #define RUN_FITS true
 
@@ -93,11 +95,11 @@ const int ampSteps = 25;
  */
 bool storeHistogram(int eventNumber) {
 	return ((MAX_NUM_OF_EVENTS_TO_BE_PROCESSED < 0 && eventNumber % 5000 == 0) /* every 5000th */
-			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 100
-					&& eventNumber % (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED / 100)
+			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 1000
+					&& eventNumber % (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED / 1000)
 							== 0)
 			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 0
-					&& MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 100));
+					&& MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 1000));
 }
 
 /**
@@ -240,9 +242,12 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	bool fitAccepted = false;
 	if (event->maxChargeX > MIN_CHARGE_X && event->maxChargeY > MIN_CHARGE_Y) {
 
-		event->generateFixedTimeCrossSection(
+		if(!event->generateFixedTimeCrossSection(
 				general_mapCombined["mmhitneighboursX"],
-				general_mapCombined["mmhitneighboursY"]);
+				general_mapCombined["mmhitneighboursY"])){
+			return false;
+		}
+
 		TF1* gaussFitX = NULL;
 		TF1* gaussFitY = NULL;
 		TH1F* fitHistoX = NULL;

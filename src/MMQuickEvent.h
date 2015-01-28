@@ -105,7 +105,7 @@ public:
 		return m_NumberOfEvents;
 	}
 
-	int getCurrentEventNumber(){
+	int getCurrentEventNumber() {
 		return m_actEventNumber;
 	}
 
@@ -181,7 +181,8 @@ public:
 	/**
 	 * Returns true if the neighbour strips of the strip with maximum charge are within a given range
 	 */
-	bool generateFixedTimeCrossSection(TH2F* maxNeighbourHistoX, TH2F* maxNeighbourHistoY) {
+	bool generateFixedTimeCrossSection(TH2F* maxNeighbourHistoX,
+			TH2F* maxNeighbourHistoY) {
 		/*
 		 * Store the charge values of every strip number for the time slice with
 		 * the maximum charge found in one event for X and Y separately (cross section
@@ -213,8 +214,8 @@ public:
 		/*
 		 * Now the array is sorted, the position of the maximal charge strip is unknown -> search for it again
 		 */
-		int positionOfMaxChargeX;
-		int positionOfMaxChargeY;
+		unsigned int positionOfMaxChargeX;
+		unsigned int positionOfMaxChargeY;
 
 		for (positionOfMaxChargeX = 0;
 				positionOfMaxChargeX < stripAndChargeAtMaxChargeTimeX.size();
@@ -234,11 +235,13 @@ public:
 			}
 		}
 
-		MapFile::getMinimalMaxHitNeighbourProportion();
+		MapFile::getProportionLimitsOfMaxHitNeighboursY();
 
 		for (int deltaStrip = -NumberOfMaxHitNeighboursToBeStored;
-				deltaStrip <= NumberOfMaxHitNeighboursToBeStored; deltaStrip++) {
+				deltaStrip <= NumberOfMaxHitNeighboursToBeStored;
+				deltaStrip++) {
 			if (deltaStrip == 0) {
+
 				// don't store the maximum strip itself
 				continue;
 			}
@@ -246,25 +249,53 @@ public:
 			// Look at the x/y strips deltaStrip away from the maximal charge strip in x/y
 			int stripX = positionOfMaxChargeX + deltaStrip;
 			int stripY = positionOfMaxChargeY + deltaStrip;
+			double proportionX = 100
+					* stripAndChargeAtMaxChargeTimeX[stripX].second
+					/ (double) maxChargeX;
+			double proportionY = 100
+					* stripAndChargeAtMaxChargeTimeY[stripY].second
+					/ (double) maxChargeY;
 
+			// Cut for neighbours of maximum X-bin
+			if (abs(deltaStrip)
+					<= MapFile::getProportionLimitsOfMaxHitNeighboursX().size()
+					&& (proportionX
+							< MapFile::getProportionLimitsOfMaxHitNeighboursX()[abs(deltaStrip)
+									- 1].first
+							|| proportionX
+									> MapFile::getProportionLimitsOfMaxHitNeighboursX()[abs(deltaStrip)
+											- 1].second)) {
+				return false;
+			}
+
+			// Cut for neighbours of maximum Y-bin
+			if (abs(deltaStrip)
+					<= MapFile::getProportionLimitsOfMaxHitNeighboursY().size()
+					&& (proportionY
+							< MapFile::getProportionLimitsOfMaxHitNeighboursY()[abs(deltaStrip)
+									- 1].first
+							|| proportionY
+									> MapFile::getProportionLimitsOfMaxHitNeighboursY()[abs(deltaStrip)
+											- 1].second)) {
+				return false;
+			}
+
+			// Fill histogramm mmhitneighboursX and mmhitneighboursY
 			if (stripX >= 0 && stripX < stripAndChargeAtMaxChargeTimeX.size()
 					&& stripAndChargeAtMaxChargeTimeX[stripX].first
 							== stripAndChargeAtMaxChargeTimeX[positionOfMaxChargeX].first
 									+ deltaStrip) {
 
-				maxNeighbourHistoX->Fill((deltaStrip),
-						100 * stripAndChargeAtMaxChargeTimeX[stripX].second
-								/ (double) maxChargeX);
+				maxNeighbourHistoX->Fill((deltaStrip), proportionX);
 			}
 			if (stripY >= 0 && stripY < stripAndChargeAtMaxChargeTimeY.size()
 					&& stripAndChargeAtMaxChargeTimeY[stripY].first
 							== stripAndChargeAtMaxChargeTimeY[positionOfMaxChargeY].first
 									+ deltaStrip) {
-				maxNeighbourHistoY->Fill((deltaStrip),
-						100 * stripAndChargeAtMaxChargeTimeY[stripY].second
-								/ (double) maxChargeY);
+				maxNeighbourHistoY->Fill((deltaStrip), proportionY);
 			}
 		}
+		return true;
 	}
 
 	void findMaxCharge() {

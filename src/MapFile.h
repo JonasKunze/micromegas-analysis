@@ -12,29 +12,42 @@
 #include <TF1.h>
 #include <TMinuit.h>
 #include <TLorentzVector.h>
+#include <TFile.h>
+
 using namespace std;
 
-//#define DRIFT_GAP 4.5;
+#define ENABLE_MAX_HIT_NEIGHBOUR_CUT true
+#define DRIFT_GAP 4.5;
 //#define DRIFT_GAP 15.5;
 //#define DRIFT_GAP 10.5;
-#define DRIFT_GAP 8.0;
+//#define DRIFT_GAP 8.0;
 
 class MapFile {
 private:
-	static std::vector<std::pair<int, int>> neighbourStripeLimitsX;
-	static std::vector<std::pair<int, int>> neighbourStripeLimitsY;
+	static std::vector<std::pair<int, int> > neighbourStripeLimitsX;
+	static std::vector<std::pair<int, int> > neighbourStripeLimitsY;
 public:
 	/**
 	 * returns a vector storing at position N the minimal proportion of the N+1-th neighbour strip of the strip with the maximum charge
 	 *
 	 * 100*charge[max+d]/charge[max]>getMinimalMaxHitNeighbourProportion()[d-1]
 	 */
-	static std::vector<std::pair<int, int>> getProportionLimitsOfMaxHitNeighboursX() {
-		return neighbourStripeLimitsX;
+	static std::vector<std::pair<int, int> > getProportionLimitsOfMaxHitNeighboursX() {
+		if (ENABLE_MAX_HIT_NEIGHBOUR_CUT) {
+			return neighbourStripeLimitsX;
+		} else {
+			// Return empty vector if no cut should be applied
+			return std::vector<std::pair<int, int> >();
+		}
 	}
 
-	static std::vector<std::pair<int, int>> getProportionLimitsOfMaxHitNeighboursY() {
-		return neighbourStripeLimitsY;
+	static std::vector<std::pair<int, int> > getProportionLimitsOfMaxHitNeighboursY() {
+		if (ENABLE_MAX_HIT_NEIGHBOUR_CUT) {
+			return neighbourStripeLimitsY;
+		} else {
+			// Return empty vector if no cut should be applied
+			return std::vector<std::pair<int, int> >();
+		}
 	}
 
 private:
