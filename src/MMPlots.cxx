@@ -16,6 +16,8 @@
  * Cuts
  */
 // Minimal charge required for the strip with maximum charge
+//#define MIN_CHARGE_X 50
+//#define MIN_CHARGE_Y 120
 #define MIN_CHARGE_X 0
 #define MIN_CHARGE_Y 0
 
@@ -242,7 +244,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	bool fitAccepted = false;
 	if (event->maxChargeX > MIN_CHARGE_X && event->maxChargeY > MIN_CHARGE_Y) {
 
-		if(!event->generateFixedTimeCrossSection(
+		if(!event->generateFixedTimeCrossSections(
 				general_mapCombined["mmhitneighboursX"],
 				general_mapCombined["mmhitneighboursY"])){
 			return false;

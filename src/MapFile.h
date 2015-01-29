@@ -16,7 +16,7 @@
 
 using namespace std;
 
-#define ENABLE_MAX_HIT_NEIGHBOUR_CUT false
+#define ENABLE_MAX_HIT_NEIGHBOUR_CUT true
 #define DRIFT_GAP 4.5;
 //#define DRIFT_GAP 15.5;
 //#define DRIFT_GAP 10.5;
