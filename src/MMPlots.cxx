@@ -16,10 +16,14 @@
  * Cuts
  */
 // Minimal charge required for the strip with maximum charge
-//#define MIN_CHARGE_X 50
-//#define MIN_CHARGE_Y 120
-#define MIN_CHARGE_X 0
-#define MIN_CHARGE_Y 0
+#define MIN_CHARGE_X 50
+#define MIN_CHARGE_Y 120
+//#define MIN_CHARGE_X 0
+//#define MIN_CHARGE_Y 0
+
+#define MIN_TIMESLICE 4
+#define MAX_TIMESLICE 23
+#define MAX_XY_TIME_DIFFERENCE 1
 
 #define FIT_RANGE 20
 #define MAX_FIT_MEAN_DISTANCE_TO_MAX 50 // Number of strips
@@ -233,6 +237,23 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 */
 
 	/*
+	 * Timing cut
+	 */
+	if (event->timeSliceOfMaxChargeX < MIN_TIMESLICE
+			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE
+			|| event->timeSliceOfMaxChargeY < MIN_TIMESLICE
+			|| event->timeSliceOfMaxChargeY > MAX_TIMESLICE) {
+		return false;
+	}
+
+	// coincidence check
+	if (abs(
+			event->timeSliceOfMaxChargeX
+					- event->timeSliceOfMaxChargeY) > MAX_XY_TIME_DIFFERENCE) {
+		return false;
+	}
+
+	/*
 	 * 4. Gaussian fits to charge distribution over strips at timestep with maximum charge
 	 */
 
@@ -240,9 +261,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	bool fitAccepted = false;
 	if (event->maxChargeX > MIN_CHARGE_X && event->maxChargeY > MIN_CHARGE_Y) {
 
-		if(!event->generateFixedTimeCrossSections(
+		if (!event->generateFixedTimeCrossSections(
 				general_mapCombined["mmhitneighboursX"],
-				general_mapCombined["mmhitneighboursY"])){
+				general_mapCombined["mmhitneighboursY"])) {
 			return false;
 		}
 
@@ -361,13 +382,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		if (/*condition to fill general histograms*/!RUN_FITS
 				|| (gaussFitY != NULL && gaussFitX != NULL)) {
 			// coincidence check between x and y signal (within 25ns)
-			if (/*condition to fill hitmap*/abs(
-					event->timeSliceOfMaxChargeX - event->timeSliceOfMaxChargeY)
-					<= 1) {
-				general_mapHist2D["mmhitmap"]->Fill(
-						/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
-						stripNumShowingSignal[event->stripWithMaxChargeY]);
-			}
+			general_mapHist2D["mmhitmap"]->Fill(
+					/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
+					stripNumShowingSignal[event->stripWithMaxChargeY]);
 
 			general_mapCombined1D["chargexAllEvents"]->Fill(event->maxChargeX);
 			general_mapCombined1D["chargeyAllEvents"]->Fill(event->maxChargeY);
