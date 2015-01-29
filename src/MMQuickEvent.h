@@ -14,6 +14,10 @@ const int APVIDMM_Y0 = 0;
 const int APVIDMM_Y1 = 1;
 const int APVIDMM_Y2 = 2;
 
+//number of strips in x and y
+const int xStrips = 360;
+const int yStrips = 360;
+
 template<class T1, class T2>
 struct sort_pair_first {
 	bool operator()(const std::pair<T1, T2>&left,
@@ -203,15 +207,14 @@ public:
 			}
 		}
 
-		if (!runProportionCut(maxNeighbourHistoX,
+		bool acceptEventX = runProportionCut(maxNeighbourHistoX,
 				stripAndChargeAtMaxChargeTimeX, maxChargeX,
-				MapFile::getProportionLimitsOfMaxHitNeighboursX())) {
-			return false;
-		}
-
-		return runProportionCut(maxNeighbourHistoY,
+				MapFile::getProportionLimitsOfMaxHitNeighboursX());
+		bool acceptEventY = runProportionCut(maxNeighbourHistoY,
 				stripAndChargeAtMaxChargeTimeY, maxChargeY,
 				MapFile::getProportionLimitsOfMaxHitNeighboursY());
+
+		return acceptEventX && acceptEventY;
 	}
 
 	bool runProportionCut(TH2F* maxNeighbourHisto,
@@ -241,6 +244,7 @@ public:
 		/*
 		 * Start at strip N left to the maximum charge strip where N is the number of entries in the propotion limits file
 		 */
+		bool accepEvent = true;
 		const int maxDistance = proportionLimits.size();
 		for (int deltaStrip = -maxDistance; deltaStrip <= maxDistance;
 				deltaStrip++) {
@@ -250,33 +254,53 @@ public:
 			}
 
 			// Look at the x/y strips deltaStrip away from the maximal charge strip in x/y
-			int strip = positionOfMaxCharge + deltaStrip;
+			int stripIndexInCrossSection = positionOfMaxCharge + deltaStrip;
 
 			// Check if all neighbour strips are available
-			if (strip < 0 // too far to the left
-			&& strip >= stripAndChargeAtMaxChargeTime.size() // too far to the right
-					&& stripAndChargeAtMaxChargeTime[strip].first // check if there is a jump in the list
-							== stripAndChargeAtMaxChargeTime[positionOfMaxCharge].first
-									+ deltaStrip) {
-				return false;
-			}
+			bool tooFarToTheLeft =
+					stripAndChargeAtMaxChargeTime[positionOfMaxCharge].first
+							+ deltaStrip <= 0; // absolute strip too far to the left
+			bool tooFarToTheRight =
+					stripAndChargeAtMaxChargeTime[positionOfMaxCharge].first
+							+ deltaStrip > xStrips; // absolute strip too far to the left
 
-			double proportion = 100
-					* stripAndChargeAtMaxChargeTime[strip].second
-					/ (double) maxCharge;
+			bool lowerLimitIsZero = proportionLimits[abs(deltaStrip) - 1].first
+					== 0; // only check if strip has charge stored if lower limit is not zero
 
-			// Cut for neighbours of maximum bin
-			if (abs(deltaStrip) <= proportionLimits.size()
-					&& (proportion < proportionLimits[abs(deltaStrip) - 1].first
+			bool stripChargeIsStored =
+					(stripIndexInCrossSection >= 0 // too far to the left in the array?
+							&& stripIndexInCrossSection
+									< stripAndChargeAtMaxChargeTime.size() // too far to the right in the array
+							&& stripAndChargeAtMaxChargeTime[stripIndexInCrossSection].first // check if there is a jump in the array
+									== stripAndChargeAtMaxChargeTime[positionOfMaxCharge].first
+											+ deltaStrip);
+
+			double proportion = NAN;
+			if (tooFarToTheRight || tooFarToTheLeft
+					|| (!stripChargeIsStored && !lowerLimitIsZero)) {
+				accepEvent = false;
+			} else {
+				if (stripChargeIsStored) {
+					proportion =
+							100
+									* stripAndChargeAtMaxChargeTime[stripIndexInCrossSection].second
+									/ (double) maxCharge;
+
+					// Cut for neighbours of maximum bin
+					if (proportion < proportionLimits[abs(deltaStrip) - 1].first
 							|| proportion
-									> proportionLimits[abs(deltaStrip) - 1].second)) {
-				return false;
+									> proportionLimits[abs(deltaStrip) - 1].second) {
+						accepEvent = false;
+					}
+				}
 			}
 
-			// Fill histogramm mmhitneighboursX and mmhitneighboursY
-			maxNeighbourHisto->Fill((deltaStrip), proportion);
+			if (proportion != NAN) {
+				// Fill histogramm mmhitneighboursX and mmhitneighboursY
+				maxNeighbourHisto->Fill((deltaStrip), proportion);
+			}
 		}
-		return true;
+		return accepEvent;
 	}
 
 	void findMaxCharge() {

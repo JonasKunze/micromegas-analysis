@@ -80,10 +80,6 @@ const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
 const string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war. Es können unter anderem angeschaut werden Raten in abhängigkeit der Spannung
 
-//number of strips in x and y
-const int xStrips = 360;
-const int yStrips = 360;
-
 //Voltage range, needed for initialization of combined histograms (hier die Schritte von VD und VA angeben (amp stimmt schon)
 const int driftStart = 100;
 const int driftEnd = 400;

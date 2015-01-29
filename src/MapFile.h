@@ -17,8 +17,8 @@
 using namespace std;
 
 #define ENABLE_MAX_HIT_NEIGHBOUR_CUT true
-#define DRIFT_GAP 4.5;
-//#define DRIFT_GAP 15.5;
+//#define DRIFT_GAP 4.5;
+#define DRIFT_GAP 15.5;
 //#define DRIFT_GAP 10.5;
 //#define DRIFT_GAP 8.0;
 
@@ -56,13 +56,13 @@ private:
 			// Erster Tag
 			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
 			neighbourStripeLimitsX.push_back(std::make_pair(5, 50));
-			neighbourStripeLimitsX.push_back(std::make_pair(0, 25));
+			neighbourStripeLimitsX.push_back(std::make_pair(0, 25)); // 1. eintrag muss null sein, da sonst kaum events
 
-			neighbourStripeLimitsY.push_back(std::make_pair(45, 100));
-			neighbourStripeLimitsY.push_back(std::make_pair(20, 50));
-			neighbourStripeLimitsY.push_back(std::make_pair(5, 30));
-			neighbourStripeLimitsY.push_back(std::make_pair(0, 20));
-			neighbourStripeLimitsY.push_back(std::make_pair(0, 10));
+			neighbourStripeLimitsY.push_back(std::make_pair(35, 100));
+			neighbourStripeLimitsY.push_back(std::make_pair(15, 70));
+			neighbourStripeLimitsY.push_back(std::make_pair(1, 30));
+//			neighbourStripeLimitsY.push_back(std::make_pair(0, 20));
+//			neighbourStripeLimitsY.push_back(std::make_pair(0, 10));
 
 			m_mapFile["VD50VA500"] = new TFile(
 					(path + appendName + "_VD50VA500.root").c_str(),
@@ -111,6 +111,13 @@ private:
 					(Option_t*) "RECREATE");
 		} else if (driftGap == 15.5) {
 // Zweiter Tag
+			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
+			neighbourStripeLimitsX.push_back(std::make_pair(5, 50));
+			neighbourStripeLimitsX.push_back(std::make_pair(0, 25));
+
+			neighbourStripeLimitsY.push_back(std::make_pair(35, 100));
+			neighbourStripeLimitsY.push_back(std::make_pair(15, 70));
+			neighbourStripeLimitsY.push_back(std::make_pair(1, 30));
 			m_mapFile["VD172VA500"] = new TFile(
 					(path + appendName + "_VD172VA500.root").c_str(),
 					(Option_t*) "RECREATE");
@@ -154,6 +161,13 @@ private:
 					(path + appendName + "_VD947VA550.root").c_str(),
 					(Option_t*) "RECREATE");
 		} else if (driftGap == 10.5) {
+			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
+			neighbourStripeLimitsX.push_back(std::make_pair(5, 50));
+			neighbourStripeLimitsX.push_back(std::make_pair(0, 25));
+
+			neighbourStripeLimitsY.push_back(std::make_pair(35, 100));
+			neighbourStripeLimitsY.push_back(std::make_pair(15, 70));
+			neighbourStripeLimitsY.push_back(std::make_pair(1, 30));
 			m_mapFile["VD117VA500"] = new TFile(
 					(path + appendName + "_VD117VA500.root").c_str(),
 					(Option_t*) "RECREATE");
@@ -200,6 +214,13 @@ private:
 					(path + appendName + "_VD817VA550.root").c_str(),
 					(Option_t*) "RECREATE");
 		} else if (driftGap == 8.0) {
+			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
+			neighbourStripeLimitsX.push_back(std::make_pair(5, 50));
+			neighbourStripeLimitsX.push_back(std::make_pair(0, 25));
+
+			neighbourStripeLimitsY.push_back(std::make_pair(35, 100));
+			neighbourStripeLimitsY.push_back(std::make_pair(15, 70));
+			neighbourStripeLimitsY.push_back(std::make_pair(1, 30));
 			m_mapFile["VD89VA500"] = new TFile(
 					(path + appendName + "_VD89VA500.root").c_str(),
 					(Option_t*) "RECREATE");
