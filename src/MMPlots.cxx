@@ -8,9 +8,8 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 1000
-
-#define NUMBER_OF_EVENT_DISPLAY 1000
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 500
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 5
 
 /*
  * Cuts
@@ -298,6 +297,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 		if (gaussFitX == NULL) {
 			cutStatistics.fitProblems++;
+			delete fitHistoX;
 			return false;
 		}
 		/*
@@ -317,7 +317,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		} else {
 			delete fitHistoX;
 			fitHistoX = NULL;
-			cutStatistics.fitMeanMaxChargeDistanceCuts;
+			cutStatistics.fitMeanMaxChargeDistanceCuts++;
 		}
 
 		gaussFitY = fitGauss(event->stripAndChargeAtMaxChargeTimeY, eventNumber,
@@ -329,6 +329,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 		if (gaussFitY == NULL) {
 			cutStatistics.fitProblems++;
+			delete fitHistoY;
 			return false;
 		}
 
@@ -349,7 +350,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		} else {
 			delete fitHistoY;
 			fitHistoY = NULL;
-			cutStatistics.fitMeanMaxChargeDistanceCuts;
+			cutStatistics.fitMeanMaxChargeDistanceCuts++;
 		}
 	}
 
@@ -365,12 +366,15 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		gauss.gaussXchiRed = gaussFitX->GetChisquare() / gaussFitX->GetNDF();
 		gauss.gaussYmean = gaussFitY->GetParameter(1);
 		gauss.gaussYmeanError = gaussFitY->GetParError(1);
-		gauss.gaussYsigma = gaussFitX->GetParameter(2);
-		gauss.gaussYcharge = gaussFitX->GetParameter(0);
+		gauss.gaussYsigma = gaussFitY->GetParameter(2);
+		gauss.gaussYcharge = gaussFitY->GetParameter(0);
 		gauss.gaussYchi = gaussFitY->GetChisquare();
 		gauss.gaussYdof = gaussFitY->GetNDF();
 		gauss.gaussYchiRed = gaussFitY->GetChisquare() / gaussFitY->GetNDF();
 		gauss.number = eventNumber;
+
+		general_mapHist1D["mmhitWidthX"]->Fill(gauss.gaussXsigma);
+		general_mapHist1D["mmhitWidthY"]->Fill(gauss.gaussYsigma);
 
 		/*
 		 * ???
@@ -394,6 +398,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		1);
 		general_mapHist2D["mmhitmapGausCut"]->Fill(/*x value*/1,/*y value*/
 		1);
+
 	}
 
 	if (/*condition to fill general histograms*/!RUN_FITS
@@ -428,6 +433,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		/*time of maximum charge x*/event->timeSliceOfMaxChargeX * 25);
 		general_mapHist1D["mmtimey"]->Fill(
 		/*time of maximum charge y*/event->timeSliceOfMaxChargeY * 25);
+
 		eventTimes.push_back(
 				(double) event->time_s + (double) event->time_us / 1e6);
 	}
@@ -435,12 +441,12 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 }
 
 // Main Program
-int main(int argc, char *argv[]) {
+void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
+		std::vector<double>& averageHitwidthsY) {
 
 // map files to read different run of data in a row
 // get data file name from MapFile.h
-	MapFile* MicroMegas = new MapFile(inPath, outPath, appendName);
-	map<string, TFile*> mapFile = MicroMegas->getFile();
+	map<string, TFile*> mapFile = MicroMegas.getFile();
 
 //TRGBURST gives number of recorded timesteps (variable from data aquisition)
 //timesteps = (TRGBURST+1)*3
@@ -452,7 +458,7 @@ int main(int argc, char *argv[]) {
 	double lastXBinValue = driftEnd + 0.5 * driftSteps;
 
 	std::stringstream combinedFileName;
-	combinedFileName << outPath << MicroMegas->getDriftGap()
+	combinedFileName << outPath << MicroMegas.getDriftGap()
 			<< combinedPlotsFile;
 
 	std::cout << combinedFileName.str() << std::endl;
@@ -492,6 +498,11 @@ int main(int argc, char *argv[]) {
 	general_mapCombined1D["chargeyAllEvents"] = new TH1F("chargeyAllEvents",
 			";charge Y; entries", 100, 0, 1000);
 
+	general_mapCombined1D["hitWidthX"] = new TH1F("hitWidthX",
+			";sigmaRunMittel ;entries", 50, 0, 3);
+	general_mapCombined1D["hitWidthY"] = new TH1F("hitWidthY",
+			";sigmaRunMittel ;entries", 50, 0, 3);
+
 	//initialize trees with structure defined above
 	TTree* cutTree = new TTree("Cuts", "Statistics of cuts");
 	cutTree->Branch("cutStatistics", &cutStatistics,
@@ -502,6 +513,10 @@ int main(int argc, char *argv[]) {
 	int runNumber = 0;
 	for (map<string, TFile*>::const_iterator Fitr(mapFile.begin());
 			Fitr != mapFile.end(); ++Fitr) {
+
+		if (runNumber == MAX_NUM_OF_RUNS_TO_BE_PROCESSED - 1) {
+			break;
+		}
 
 		std::cout << "Reading File " << ++runNumber << " out of "
 				<< mapFile.size() << std::endl;
@@ -532,6 +547,11 @@ int main(int argc, char *argv[]) {
 		general_mapHist1D["mmrate"] = new TH1F("mmrate",
 				";rate/10min [Hz]; entries", 200, 0, 2.);
 
+		general_mapHist1D["mmhitWidthX"] = new TH1F("mmhitWidthX",
+				";sigma; entries", 30, 0., 5.);
+		general_mapHist1D["mmhitWidthY"] = new TH1F("mmhitWidthY",
+				";sigma; entries", 30, 0., 5.);
+
 		general_mapHist2D["mmhitmap"] = new TH2F("mmhitmap",
 				";x [strips]; y [strips]", xStrips, 0, xStrips, yStrips, 0,
 				yStrips);
@@ -556,7 +576,7 @@ int main(int argc, char *argv[]) {
 		TFile *file0 = Fitr->second;
 
 		// Read NUTuple and execute events
-		vector<string> vec_Filenames = MicroMegas->getFileName(Fitr->first);
+		vector<string> vec_Filenames = MicroMegas.getFileName(Fitr->first);
 		m_event = new MMQuickEvent(vec_Filenames, "raw", -1); //last number indicates number of events to be analysed, -1 for all events
 		m_TotalEventNumber = m_event->getEventNumber();
 
@@ -569,6 +589,26 @@ int main(int argc, char *argv[]) {
 			eventNumber++;
 			general_mapCombinedTree["cuts"]->Fill();
 		}
+
+		/*
+		 * Fit hit width histogram
+		 */
+		TH1F* widthHistoX = general_mapHist1D["mmhitWidthX"];
+		// fit histrogram maxChargeDistribution with Gaussian distribution
+		widthHistoX->Fit("gaus", "Sq");
+		TF1* widthHistXFitResult = widthHistoX->GetFunction("gaus");
+		if (widthHistXFitResult)
+			general_mapCombined1D["hitWidthX"]->Fill(
+					widthHistXFitResult->GetParameter(1));
+
+		TH1F* widthHistoY = general_mapHist1D["mmhitWidthY"];
+		// fit histrogram maYChargeDistribution with Gaussian distribution
+		widthHistoY->Fit("gaus", "Sq");
+
+		TF1* widthHistYFitResult = widthHistoY->GetFunction("gaus");
+		if (widthHistXFitResult)
+			general_mapCombined1D["hitWidthY"]->Fill(
+					widthHistYFitResult->GetParameter(1));
 
 		float lengthOfMeasurement = 0.;
 		if (!eventTimes.empty()) {
@@ -598,7 +638,7 @@ int main(int argc, char *argv[]) {
 				}
 				lastTime = eventTimes.at(e);
 			}
-			eventTimes.clear(); // clear vector for next measurment
+			eventTimes.clear(); // clear vector for next measurement
 		}
 
 		//delete m_event to clear cache
@@ -637,10 +677,6 @@ int main(int argc, char *argv[]) {
 				(atoi(Fitr->first.substr(7, 3).c_str()) - ampStart) / ampSteps
 						+ 1,/*insert charge of Y here*/
 				1);
-
-		gauss.gaussXcharge = 1;
-		gauss.gaussXmean = 2;
-		gauss.gaussXmeanError = 3;
 
 		/// Saving Results
 		file0->mkdir("trees");
@@ -690,6 +726,12 @@ int main(int argc, char *argv[]) {
 		//end of processing of one run
 	}
 
+	/*
+	 * Store the average hit widths of all runs with the current driftGap
+	 */
+	averageHitwidthsX.push_back(general_mapCombined1D["hitWidthX"]->GetMean());
+	averageHitwidthsY.push_back(general_mapCombined1D["hitWidthY"]->GetMean());
+
 	gDirectory->cd("..");
 	gDirectory->mkdir("Combined");
 	gDirectory->cd("Combined");
@@ -716,6 +758,32 @@ int main(int argc, char *argv[]) {
 	}
 
 	fileCombined->Close();
+}
 
-	return 0;
+// Main Program
+int main(int argc, char *argv[]) {
+	std::vector<double> averageHitwidthsX;
+	std::vector<double> averageHitwidthsY;
+	std::vector<double> driftGaps = MapFile::getAvailableDriftGaps();
+
+	for (std::vector<double>::iterator iter = driftGaps.begin();
+			iter != driftGaps.end(); iter++) {
+		MapFile MicroMegas(inPath, outPath, appendName, *iter);
+		readFiles(MicroMegas, averageHitwidthsX, averageHitwidthsY);
+	}
+
+	std::stringstream resultFileName;
+	resultFileName << outPath << "result.root";
+
+	TFile* fileCombined = new TFile(resultFileName.str().c_str(),
+			(Option_t*) "RECREATE");
+
+	fileCombined->cd();
+	TGraph* hitWidthVsDriftGapX = new TGraph(driftGaps.size(), &driftGaps[0],
+			&averageHitwidthsX[0]);
+	hitWidthVsDriftGapX->Write("hitWidthVsDriftGapX");
+	TGraph* hitWidthVsDriftGapY = new TGraph(driftGaps.size(), &driftGaps[0],
+			&averageHitwidthsY[0]);
+	hitWidthVsDriftGapY->Write("hitWidthVsDriftGapY");
+	fileCombined->Close();
 }

@@ -16,16 +16,21 @@
 
 using namespace std;
 
-#define DRIFT_GAP 4.5
-//#define DRIFT_GAP 15.5
-//#define DRIFT_GAP 10.5
-//#define DRIFT_GAP 8.0
-
 class MapFile {
 private:
 	static std::vector<std::pair<int, int> > neighbourStripeLimitsX;
 	static std::vector<std::pair<int, int> > neighbourStripeLimitsY;
 public:
+
+	static std::vector<double> getAvailableDriftGaps() {
+		std::vector<double> gaps;
+		gaps.push_back(4.5);
+		gaps.push_back(8.0);
+		gaps.push_back(10.5);
+		gaps.push_back(15.5);
+		return gaps;
+	}
+
 	/**
 	 * returns a vector storing at position N the minimal proportion of the N+1-th neighbour strip of the strip with the maximum charge
 	 *
@@ -41,6 +46,9 @@ public:
 
 private:
 	void createFile() {
+		neighbourStripeLimitsX.clear();
+		neighbourStripeLimitsY.clear();
+
 		if (driftGap == 4.5) {
 			// Erster Tag
 			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
@@ -50,8 +58,6 @@ private:
 			neighbourStripeLimitsY.push_back(std::make_pair(35, 100));
 			neighbourStripeLimitsY.push_back(std::make_pair(15, 70));
 			neighbourStripeLimitsY.push_back(std::make_pair(1, 30));
-//			neighbourStripeLimitsY.push_back(std::make_pair(0, 20));
-//			neighbourStripeLimitsY.push_back(std::make_pair(0, 10));
 
 			m_mapFile["VD50VA500"] = new TFile(
 					(path + appendName + "_VD50VA500.root").c_str(),
@@ -62,42 +68,42 @@ private:
 			m_mapFile["VD200VA500"] = new TFile(
 					(path + appendName + "_VD200VA500.root").c_str(),
 					(Option_t*) "RECREATE");
-//			m_mapFile["VD275VA500"] = new TFile(
-//					(path + appendName + "_VD275VA500.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD350VA500"] = new TFile(
-//					(path + appendName + "_VD350VA500.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD50VA525"] = new TFile(
-//					(path + appendName + "_VD50VA525.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD125VA525"] = new TFile(
-//					(path + appendName + "_VD125VA525.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD200VA525"] = new TFile(
-//					(path + appendName + "_VD200VA525.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD275VA525"] = new TFile(
-//					(path + appendName + "_VD275VA525.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD350VA525"] = new TFile(
-//					(path + appendName + "_VD350VA525.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD50VA550"] = new TFile(
-//					(path + appendName + "_VD50VA550.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD125VA550"] = new TFile(
-//					(path + appendName + "_VD125VA550.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD200VA550"] = new TFile(
-//					(path + appendName + "_VD200VA550.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD275VA550"] = new TFile(
-//					(path + appendName + "_VD275VA550.root").c_str(),
-//					(Option_t*) "RECREATE");
-//			m_mapFile["VD350VA550"] = new TFile(
-//					(path + appendName + "_VD350VA550.root").c_str(),
-//					(Option_t*) "RECREATE");
+			m_mapFile["VD275VA500"] = new TFile(
+					(path + appendName + "_VD275VA500.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD350VA500"] = new TFile(
+					(path + appendName + "_VD350VA500.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD50VA525"] = new TFile(
+					(path + appendName + "_VD50VA525.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD125VA525"] = new TFile(
+					(path + appendName + "_VD125VA525.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD200VA525"] = new TFile(
+					(path + appendName + "_VD200VA525.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD275VA525"] = new TFile(
+					(path + appendName + "_VD275VA525.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD350VA525"] = new TFile(
+					(path + appendName + "_VD350VA525.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD50VA550"] = new TFile(
+					(path + appendName + "_VD50VA550.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD125VA550"] = new TFile(
+					(path + appendName + "_VD125VA550.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD200VA550"] = new TFile(
+					(path + appendName + "_VD200VA550.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD275VA550"] = new TFile(
+					(path + appendName + "_VD275VA550.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD350VA550"] = new TFile(
+					(path + appendName + "_VD350VA550.root").c_str(),
+					(Option_t*) "RECREATE");
 		} else if (driftGap == 15.5) {
 // Zweiter Tag
 			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
@@ -262,23 +268,17 @@ private:
 
 public:
 	/**
-	 * Consctructor
+	 * Constructor
 	 */
-	MapFile(string data_dir, string path, string appendName) {
+	MapFile(string data_dir, string path, string appendName, double _driftGap) {
 		this->data_dir = data_dir;
 		this->path = path;
 		this->appendName = appendName;
-		driftGap = DRIFT_GAP;
+		driftGap = _driftGap;
 		createFile();
-
-		singleton = this;
 	}
 
 	~MapFile() {
-		for (map<string, TFile*>::const_iterator itr(m_mapFile.begin());
-				itr != m_mapFile.end(); ++itr) {
-			delete itr->second;
-		}
 	}
 
 	map<string, TFile*> getFile() {
@@ -287,11 +287,6 @@ public:
 
 	double getDriftGap() {
 		return driftGap;
-	}
-
-	double setDriftGap(double _driftGap) {
-		driftGap = _driftGap;
-		singleton->createFile();
 	}
 
 	vector<string> getFileName(string type) {
@@ -434,7 +429,6 @@ private:
 	string path;
 	string appendName;
 	static double driftGap;
-	static MapFile* singleton;
 };
 
 #endif
