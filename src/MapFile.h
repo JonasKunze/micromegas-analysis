@@ -270,6 +270,15 @@ public:
 		this->appendName = appendName;
 		driftGap = DRIFT_GAP;
 		createFile();
+
+		singleton = this;
+	}
+
+	~MapFile() {
+		for (map<string, TFile*>::const_iterator itr(m_mapFile.begin());
+				itr != m_mapFile.end(); ++itr) {
+			delete itr->second;
+		}
 	}
 
 	~MapFile() {
@@ -285,6 +294,11 @@ public:
 
 	double getDriftGap() {
 		return driftGap;
+	}
+
+	double setDriftGap(double _driftGap) {
+		driftGap = _driftGap;
+		singleton->createFile();
 	}
 
 	vector<string> getFileName(string type) {
@@ -427,6 +441,7 @@ private:
 	string path;
 	string appendName;
 	static double driftGap;
+	static MapFile* singleton;
 };
 
 #endif
