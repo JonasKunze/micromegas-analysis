@@ -26,7 +26,7 @@
 #define MAX_XY_TIME_DIFFERENCE 1
 
 #define FIT_RANGE 20
-#define MAX_FIT_MEAN_DISTANCE_TO_MAX 50 // Number of strips
+#define MAX_FIT_MEAN_DISTANCE_TO_MAX 2 // Number of strips
 
 #define RUN_FITS true
 
