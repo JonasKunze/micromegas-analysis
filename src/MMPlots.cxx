@@ -18,10 +18,11 @@
 // Minimal charge required for the strip with maximum charge
 #define MIN_CHARGE_X 50
 #define MIN_CHARGE_Y 120
-//#define MIN_CHARGE_X 0
+//#define MIN_CHARGE_X 0map<string, TTree*> general_mapTree; 		//TTress
+
 //#define MIN_CHARGE_Y 0
 
-#define MIN_TIMESLICE 4
+#define MIN_TIMESLICE 3
 #define MAX_TIMESLICE 23
 #define MAX_XY_TIME_DIFFERENCE 1
 
@@ -41,6 +42,7 @@ map<string, TH2F*> general_mapHist2DEvent; 	//plot of 2D EventDisplay
 map<string, TH1F*> general_mapPlotFit;		//plot of fits
 map<string, TH2F*> general_mapCombined;		//combined Plots
 map<string, TH1F*> general_mapCombined1D;
+map<string, TTree*> general_mapCombinedTree;
 
 Double_t m_TotalEventNumber;
 vector<double> eventTimes;
@@ -76,6 +78,7 @@ struct maxi_t {
 
 gauss_t gauss;
 maxi_t maxi;
+cutStatistics_t cutStatistics;
 
 //set output path and name of output files
 const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
@@ -243,6 +246,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE
 			|| event->timeSliceOfMaxChargeY < MIN_TIMESLICE
 			|| event->timeSliceOfMaxChargeY > MAX_TIMESLICE) {
+		cutStatistics.timingCuts++;
 		return false;
 	}
 
@@ -250,6 +254,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	if (abs(
 			event->timeSliceOfMaxChargeX
 					- event->timeSliceOfMaxChargeY) > MAX_XY_TIME_DIFFERENCE) {
+		cutStatistics.timeCoincidenceCuts++;
 		return false;
 	}
 
@@ -258,162 +263,173 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 */
 
 // first data cut: remove events with small charge
-	bool fitAccepted = false;
-	if (event->maxChargeX > MIN_CHARGE_X && event->maxChargeY > MIN_CHARGE_Y) {
+	if (event->maxChargeX < MIN_CHARGE_X && event->maxChargeY < MIN_CHARGE_Y) {
+		cutStatistics.chargeCuts++;
+		return false;
+	}
 
-		if (!event->generateFixedTimeCrossSections(
-				general_mapCombined["mmhitneighboursX"],
-				general_mapCombined["mmhitneighboursY"])) {
+	event->generateFixedTimeCrossSections();
+
+	bool acceptEventX = event->runProportionCut(
+			general_mapCombined["mmhitneighboursX"],
+			event->stripAndChargeAtMaxChargeTimeX, event->maxChargeX,
+			MapFile::getProportionLimitsOfMaxHitNeighboursX(), cutStatistics);
+	bool acceptEventY = event->runProportionCut(
+			general_mapCombined["mmhitneighboursY"],
+			event->stripAndChargeAtMaxChargeTimeY, event->maxChargeY,
+			MapFile::getProportionLimitsOfMaxHitNeighboursY(), cutStatistics);
+
+	if (!acceptEventX || !acceptEventY) {
+		return false;
+	}
+
+	TF1* gaussFitX = NULL;
+	TF1* gaussFitY = NULL;
+	TH1F* fitHistoX = NULL;
+	TH1F* fitHistoY = NULL;
+	if (RUN_FITS) {
+		int startFitRange = stripNumShowingSignal[event->stripWithMaxChargeX]
+				- FIT_RANGE / 2;
+		gaussFitX = fitGauss(event->stripAndChargeAtMaxChargeTimeX, eventNumber,
+				"maxChargeDistributionX", fitHistoX,
+				startFitRange > 0 ? startFitRange : 0,
+				stripNumShowingSignal[event->stripWithMaxChargeX]
+						+ FIT_RANGE / 2);
+
+		if (gaussFitX == NULL) {
+			cutStatistics.fitProblems++;
+			return false;
+		}
+		/*
+		 * Check if the fit mean is close enough to the maximum
+		 */
+		double mean = gaussFitX->GetParameter(1);
+		if (abs(
+				stripNumShowingSignal[event->stripWithMaxChargeX]
+						- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+			if (storeHistogram(eventNumber)) {
+				general_mapPlotFit[std::string(fitHistoX->GetName())] =
+						fitHistoX;
+			} else {
+				delete fitHistoX;
+				fitHistoX = NULL;
+			}
+		} else {
+			delete fitHistoX;
+			fitHistoX = NULL;
+			cutStatistics.fitMeanMaxChargeDistanceCuts;
+		}
+
+		gaussFitY = fitGauss(event->stripAndChargeAtMaxChargeTimeY, eventNumber,
+				"maxChargeDistributionY", fitHistoY,
+				stripNumShowingSignal[event->stripWithMaxChargeY]
+						- FIT_RANGE / 2,
+				stripNumShowingSignal[event->stripWithMaxChargeY]
+						+ FIT_RANGE / 2);
+
+		if (gaussFitY == NULL) {
+			cutStatistics.fitProblems++;
 			return false;
 		}
 
-		TF1* gaussFitX = NULL;
-		TF1* gaussFitY = NULL;
-		TH1F* fitHistoX = NULL;
-		TH1F* fitHistoY = NULL;
-		if (RUN_FITS) {
-			int startFitRange =
-					stripNumShowingSignal[event->stripWithMaxChargeX]
-							- FIT_RANGE / 2;
-			gaussFitX = fitGauss(event->stripAndChargeAtMaxChargeTimeX,
-					eventNumber, "maxChargeDistributionX", fitHistoX,
-					startFitRange > 0 ? startFitRange : 0,
-					stripNumShowingSignal[event->stripWithMaxChargeX]
-							+ FIT_RANGE / 2);
-
-			/*
-			 * Check if the fit mean is close enough to the maximum
-			 */
-			if (gaussFitX != NULL) {
-				double mean = gaussFitX->GetParameter(1);
-				if (abs(
-						stripNumShowingSignal[event->stripWithMaxChargeX]
-								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
-					if (storeHistogram(eventNumber)) {
-						general_mapPlotFit[std::string(fitHistoX->GetName())] =
-								fitHistoX;
-					} else {
-						delete fitHistoX;
-						fitHistoX = NULL;
-					}
-					fitAccepted = true;
-				} else {
-					delete fitHistoX;
-					fitHistoX = NULL;
-				}
+		/*
+		 * Check if the fit mean is close enough to the maximum
+		 */
+		mean = gaussFitY->GetParameter(1);
+		if (abs(
+				stripNumShowingSignal[event->stripWithMaxChargeY]
+						- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+			if (storeHistogram(eventNumber)) {
+				general_mapPlotFit[std::string(fitHistoY->GetName())] =
+						fitHistoY;
+			} else {
+				delete fitHistoY;
+				fitHistoY = NULL;
 			}
-
-			gaussFitY = fitGauss(event->stripAndChargeAtMaxChargeTimeY,
-					eventNumber, "maxChargeDistributionY", fitHistoY,
-					stripNumShowingSignal[event->stripWithMaxChargeY]
-							- FIT_RANGE / 2,
-					stripNumShowingSignal[event->stripWithMaxChargeY]
-							+ FIT_RANGE / 2);
-
-			/*
-			 * Check if the fit mean is close enough to the maximum
-			 */
-			if (gaussFitY != NULL) {
-				double mean = gaussFitY->GetParameter(1);
-				if (abs(
-						stripNumShowingSignal[event->stripWithMaxChargeY]
-								- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
-					if (storeHistogram(eventNumber)) {
-						general_mapPlotFit[std::string(fitHistoY->GetName())] =
-								fitHistoY;
-					} else {
-						delete fitHistoY;
-						fitHistoY = NULL;
-					}
-				} else {
-					delete fitHistoY;
-					fitHistoY = NULL;
-					fitAccepted = false;
-				}
-			}
+		} else {
+			delete fitHistoY;
+			fitHistoY = NULL;
+			cutStatistics.fitMeanMaxChargeDistanceCuts;
 		}
+	}
 
 //storage after procession
 //Fill trees	(replace 1)
-		if (/*condition to store the fit*/fitAccepted && fitHistoY != NULL
-				&& fitHistoX != NULL && gaussFitY != NULL && gaussFitX != NULL) {
-			gauss.gaussXmean = gaussFitX->GetParameter(1);
-			gauss.gaussXmeanError = gaussFitX->GetParError(1);
-			gauss.gaussXsigma = gaussFitX->GetParameter(2);
-			gauss.gaussXcharge = gaussFitX->GetParameter(0);
-			gauss.gaussXchi = gaussFitX->GetChisquare();
-			gauss.gaussXdof = gaussFitX->GetNDF();
-			gauss.gaussXchiRed = gaussFitX->GetChisquare()
-					/ gaussFitX->GetNDF();
-			gauss.gaussYmean = gaussFitY->GetParameter(1);
-			gauss.gaussYmeanError = gaussFitY->GetParError(1);
-			gauss.gaussYsigma = gaussFitX->GetParameter(2);
-			gauss.gaussYcharge = gaussFitX->GetParameter(0);
-			gauss.gaussYchi = gaussFitY->GetChisquare();
-			gauss.gaussYdof = gaussFitY->GetNDF();
-			gauss.gaussYchiRed = gaussFitY->GetChisquare()
-					/ gaussFitY->GetNDF();
-			gauss.number = eventNumber;
+	if (/*condition to store the fit*/fitHistoY != NULL && fitHistoX != NULL) {
+		gauss.gaussXmean = gaussFitX->GetParameter(1);
+		gauss.gaussXmeanError = gaussFitX->GetParError(1);
+		gauss.gaussXsigma = gaussFitX->GetParameter(2);
+		gauss.gaussXcharge = gaussFitX->GetParameter(0);
+		gauss.gaussXchi = gaussFitX->GetChisquare();
+		gauss.gaussXdof = gaussFitX->GetNDF();
+		gauss.gaussXchiRed = gaussFitX->GetChisquare() / gaussFitX->GetNDF();
+		gauss.gaussYmean = gaussFitY->GetParameter(1);
+		gauss.gaussYmeanError = gaussFitY->GetParError(1);
+		gauss.gaussYsigma = gaussFitX->GetParameter(2);
+		gauss.gaussYcharge = gaussFitX->GetParameter(0);
+		gauss.gaussYchi = gaussFitY->GetChisquare();
+		gauss.gaussYdof = gaussFitY->GetNDF();
+		gauss.gaussYchiRed = gaussFitY->GetChisquare() / gaussFitY->GetNDF();
+		gauss.number = eventNumber;
 
-			/*
-			 * ???
-			 * Was ist hier zu tun?
-			 */
-			maxi.maxXmean = event->maxChargeX;
-			maxi.maxYmean = event->maxChargeY;
-			maxi.maxXcharge = 1;
-			maxi.maxYcharge = 1;
-			maxi.maxXcluster = 1;
-			maxi.maxYcluster = 1;
-			maxi.number = eventNumber;
+		/*
+		 * ???
+		 * Was ist hier zu tun?
+		 */
+		maxi.maxXmean = event->maxChargeX;
+		maxi.maxYmean = event->maxChargeY;
+		maxi.maxXcharge = 1;
+		maxi.maxYcharge = 1;
+		maxi.maxXcluster = 1;
+		maxi.maxYcluster = 1;
+		maxi.number = eventNumber;
 
-			general_mapTree["fits"]->Fill();
+		general_mapTree["fits"]->Fill();
 
-			/*
-			 * ???
-			 * Was ist hier gefragt? Was ist der unterschied zu mmhitmap
-			 */
-			general_mapHist2D["mmhitmapMaxCut"]->Fill(/*x value*/1,/*y value*/
-			1);
-			general_mapHist2D["mmhitmapGausCut"]->Fill(/*x value*/1,/*y value*/
-			1);
-		}
+		/*
+		 * ???
+		 * Was ist hier gefragt? Was ist der unterschied zu mmhitmap
+		 */
+		general_mapHist2D["mmhitmapMaxCut"]->Fill(/*x value*/1,/*y value*/
+		1);
+		general_mapHist2D["mmhitmapGausCut"]->Fill(/*x value*/1,/*y value*/
+		1);
+	}
 
-		if (/*condition to fill general histograms*/!RUN_FITS
-				|| (gaussFitY != NULL && gaussFitX != NULL)) {
-			// coincidence check between x and y signal (within 25ns)
-			general_mapHist2D["mmhitmap"]->Fill(
-					/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
-					stripNumShowingSignal[event->stripWithMaxChargeY]);
+	if (/*condition to fill general histograms*/!RUN_FITS
+			|| (gaussFitY != NULL && gaussFitX != NULL)) {
+		// coincidence check between x and y signal (within 25ns)
+		general_mapHist2D["mmhitmap"]->Fill(
+				/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
+				stripNumShowingSignal[event->stripWithMaxChargeY]);
 
-			general_mapCombined1D["chargexAllEvents"]->Fill(event->maxChargeX);
-			general_mapCombined1D["chargeyAllEvents"]->Fill(event->maxChargeY);
+		general_mapCombined1D["chargexAllEvents"]->Fill(event->maxChargeX);
+		general_mapCombined1D["chargeyAllEvents"]->Fill(event->maxChargeY);
 
-			general_mapHist1D["mmchargex"]->Fill(
-			/*maximum charge x*/event->maxChargeX);
-			general_mapHist1D["mmchargey"]->Fill(
-			/*maximum charge y*/event->maxChargeY);
-			general_mapHist1D["mmhitx"]->Fill(
-					/*strip x with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeX]);
-			general_mapHist1D["mmhity"]->Fill(
-					/*strip y with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeY]);
+		general_mapHist1D["mmchargex"]->Fill(
+		/*maximum charge x*/event->maxChargeX);
+		general_mapHist1D["mmchargey"]->Fill(
+		/*maximum charge y*/event->maxChargeY);
+		general_mapHist1D["mmhitx"]->Fill(
+				/*strip x with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeX]);
+		general_mapHist1D["mmhity"]->Fill(
+				/*strip y with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeY]);
 
-			/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			 * !!!!!!!!!!!!!!!!!!!!!! To be implemented!!!!!!!!!!!!!!!!!!!!!!!!!
-			 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			 */
-			general_mapHist1D["mmclusterx"]->Fill(
-			/*number of x strips hit by one event*/event->numberOfXHits);
-			general_mapHist1D["mmclustery"]->Fill(
-			/*number of y strips hit by one event*/event->numberOfYHits);
+		/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		 * !!!!!!!!!!!!!!!!!!!!!! To be implemented!!!!!!!!!!!!!!!!!!!!!!!!!
+		 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		 */
+		general_mapHist1D["mmclusterx"]->Fill(
+		/*number of x strips hit by one event*/event->numberOfXHits);
+		general_mapHist1D["mmclustery"]->Fill(
+		/*number of y strips hit by one event*/event->numberOfYHits);
 
-			general_mapHist1D["mmtimex"]->Fill(
-			/*time of maximum charge x*/event->timeSliceOfMaxChargeX * 25);
-			general_mapHist1D["mmtimey"]->Fill(
-			/*time of maximum charge y*/event->timeSliceOfMaxChargeY * 25);
-			eventTimes.push_back(
-					(double) event->time_s + (double) event->time_us / 1e6);
-		}
+		general_mapHist1D["mmtimex"]->Fill(
+		/*time of maximum charge x*/event->timeSliceOfMaxChargeX * 25);
+		general_mapHist1D["mmtimey"]->Fill(
+		/*time of maximum charge y*/event->timeSliceOfMaxChargeY * 25);
+		eventTimes.push_back(
+				(double) event->time_s + (double) event->time_us / 1e6);
 	}
 	return true;
 }
@@ -475,6 +491,12 @@ int main(int argc, char *argv[]) {
 			";charge X; entries", 100, 0, 1000);
 	general_mapCombined1D["chargeyAllEvents"] = new TH1F("chargeyAllEvents",
 			";charge Y; entries", 100, 0, 1000);
+
+	//initialize trees with structure defined above
+	TTree* cutTree = new TTree("Cuts", "Statistics of cuts");
+	cutTree->Branch("cutStatistics", &cutStatistics,
+			"timingCuts/I:chargeCuts/I:timeCoincidenceCuts/I:absolutePositionCuts/I:proportionCuts/I:fitMeanMaxChargeDistanceCuts/I:fitProblems/I");
+	general_mapCombinedTree["cuts"] = cutTree;
 
 // iterate of different runs in the map
 	int runNumber = 0;
@@ -541,9 +563,11 @@ int main(int argc, char *argv[]) {
 		// loop over all events
 		while (m_event->getNextEvent()
 				&& eventNumber != MAX_NUM_OF_EVENTS_TO_BE_PROCESSED) {
+			cutStatistics = {0};
 			if (analyseMMEvent(m_event, eventNumber, TRGBURST) == true) {
 			}
 			eventNumber++;
+			general_mapCombinedTree["cuts"]->Fill();
 		}
 
 		float lengthOfMeasurement = 0.;
@@ -614,6 +638,10 @@ int main(int argc, char *argv[]) {
 						+ 1,/*insert charge of Y here*/
 				1);
 
+		gauss.gaussXcharge = 1;
+		gauss.gaussXmean = 2;
+		gauss.gaussXmeanError = 3;
+
 		/// Saving Results
 		file0->mkdir("trees");
 		file0->cd("trees");
@@ -677,6 +705,16 @@ int main(int argc, char *argv[]) {
 		iter->second->Write();
 		delete iter->second;
 	}
+
+	gDirectory->cd("..");
+	gDirectory->mkdir("Trees");
+	gDirectory->cd("Trees");
+	for (map<string, TTree*>::iterator iter = general_mapCombinedTree.begin();
+			iter != general_mapCombinedTree.end(); iter++) {
+		iter->second->Write();
+		delete iter->second;
+	}
+
 	fileCombined->Close();
 
 	return 0;

@@ -26,6 +26,17 @@ struct sort_pair_first {
 	}
 };
 
+struct cutStatistics_t {
+	Int_t timingCuts;
+	Int_t chargeCuts;
+	Int_t timeCoincidenceCuts;
+	Int_t absolutePositionCuts;
+	Int_t proportionCuts;
+	Int_t fitMeanMaxChargeDistanceCuts;
+	Int_t fitProblems;
+
+};
+
 class MMQuickEvent {
 public:
 	MMQuickEvent(vector<string> vecFilenames, string Tree_Name,
@@ -183,8 +194,7 @@ public:
 	/**
 	 * Returns true if the neighbour strips of the strip with maximum charge are within a given range
 	 */
-	bool generateFixedTimeCrossSections(TH2F* maxNeighbourHistoX,
-			TH2F* maxNeighbourHistoY) {
+	void generateFixedTimeCrossSections() {
 		/*
 		 * Store the charge values of every strip number for the time slice with
 		 * the maximum charge found in one event for X and Y separately (cross section
@@ -206,21 +216,12 @@ public:
 								(*apv_q)[strip][timeSliceOfMaxChargeY]/*Charge*/));
 			}
 		}
-
-		bool acceptEventX = runProportionCut(maxNeighbourHistoX,
-				stripAndChargeAtMaxChargeTimeX, maxChargeX,
-				MapFile::getProportionLimitsOfMaxHitNeighboursX());
-		bool acceptEventY = runProportionCut(maxNeighbourHistoY,
-				stripAndChargeAtMaxChargeTimeY, maxChargeY,
-				MapFile::getProportionLimitsOfMaxHitNeighboursY());
-
-		return acceptEventX && acceptEventY;
 	}
 
 	bool runProportionCut(TH2F* maxNeighbourHisto,
 			vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTime,
-			short maxCharge,
-			std::vector<std::pair<int, int> > proportionLimits) {
+			short maxCharge, std::vector<std::pair<int, int> > proportionLimits,
+			cutStatistics_t& cutStat) {
 
 		// Sort cross section by absolute strip numbers (first entry in pairs)
 		std::sort(stripAndChargeAtMaxChargeTime.begin(),
@@ -276,8 +277,15 @@ public:
 											+ deltaStrip);
 
 			double proportion = NAN;
-			if (tooFarToTheRight || tooFarToTheLeft
-					|| (!stripChargeIsStored && !lowerLimitIsZero)) {
+			if (tooFarToTheRight || tooFarToTheLeft) {
+				if (accepEvent) {
+					cutStat.absolutePositionCuts++;
+				}
+				accepEvent = false;
+			} else if (!stripChargeIsStored && !lowerLimitIsZero) {
+				if (accepEvent) {
+					cutStat.proportionCuts++;
+				}
 				accepEvent = false;
 			} else {
 				if (stripChargeIsStored) {
@@ -290,6 +298,9 @@ public:
 					if (proportion < proportionLimits[abs(deltaStrip) - 1].first
 							|| proportion
 									> proportionLimits[abs(deltaStrip) - 1].second) {
+						if (accepEvent) {
+							cutStat.proportionCuts++;
+						}
 						accepEvent = false;
 					}
 				}
