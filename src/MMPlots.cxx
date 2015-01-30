@@ -8,7 +8,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 500
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 10000
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 5
 
 /*
@@ -442,7 +442,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 // Main Program
 void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
-		std::vector<double>& averageHitwidthsY) {
+		std::vector<double>& averageHitwidthsY,
+		std::vector<double>& averageHitwidthsXError,
+		std::vector<double>& averageHitwidthsYError) {
 
 // map files to read different run of data in a row
 // get data file name from MapFile.h
@@ -730,7 +732,11 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	 * Store the average hit widths of all runs with the current driftGap
 	 */
 	averageHitwidthsX.push_back(general_mapCombined1D["hitWidthX"]->GetMean());
+	averageHitwidthsXError.push_back(
+			general_mapCombined1D["hitWidthX"]->GetMeanError());
 	averageHitwidthsY.push_back(general_mapCombined1D["hitWidthY"]->GetMean());
+	averageHitwidthsYError.push_back(
+			general_mapCombined1D["hitWidthY"]->GetMeanError());
 
 	gDirectory->cd("..");
 	gDirectory->mkdir("Combined");
@@ -762,14 +768,25 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 
 // Main Program
 int main(int argc, char *argv[]) {
+	gStyle->SetOptFit(1111);
+
 	std::vector<double> averageHitwidthsX;
+	std::vector<double> averageHitwidthsXError;
 	std::vector<double> averageHitwidthsY;
+	std::vector<double> averageHitwidthsYError;
 	std::vector<double> driftGaps = MapFile::getAvailableDriftGaps();
 
 	for (std::vector<double>::iterator iter = driftGaps.begin();
 			iter != driftGaps.end(); iter++) {
 		MapFile MicroMegas(inPath, outPath, appendName, *iter);
-		readFiles(MicroMegas, averageHitwidthsX, averageHitwidthsY);
+		readFiles(MicroMegas, averageHitwidthsX, averageHitwidthsY,
+				averageHitwidthsXError, averageHitwidthsYError);
+	}
+
+	// Set all driftgap errors to 0.1 mm
+	std::vector<double> driftGapErrors;
+	for (int i = 0; i < driftGaps.size(); i++) {
+		driftGapErrors.push_back(0.1);
 	}
 
 	std::stringstream resultFileName;
@@ -779,11 +796,25 @@ int main(int argc, char *argv[]) {
 			(Option_t*) "RECREATE");
 
 	fileCombined->cd();
-	TGraph* hitWidthVsDriftGapX = new TGraph(driftGaps.size(), &driftGaps[0],
-			&averageHitwidthsX[0]);
+	TGraphErrors* hitWidthVsDriftGapX = new TGraphErrors(driftGaps.size(),
+			&driftGaps[0], &averageHitwidthsX[0], &driftGapErrors[0],
+			&averageHitwidthsXError[0]);
+	hitWidthVsDriftGapX->SetTitle("hitWidthVsDriftGapX");
+	hitWidthVsDriftGapX->GetXaxis()->SetTitle("driftGap [mm]");
+	hitWidthVsDriftGapX->GetYaxis()->SetTitle("average hit width [strips]");
+
+	hitWidthVsDriftGapX->Fit("pol1", "q");
+	hitWidthVsDriftGapX->Fit("pol2", "q");
 	hitWidthVsDriftGapX->Write("hitWidthVsDriftGapX");
-	TGraph* hitWidthVsDriftGapY = new TGraph(driftGaps.size(), &driftGaps[0],
-			&averageHitwidthsY[0]);
+
+	TGraphErrors* hitWidthVsDriftGapY = new TGraphErrors(driftGaps.size(),
+			&driftGaps[0], &averageHitwidthsY[0], &driftGapErrors[0],
+			&averageHitwidthsYError[0]);
+	hitWidthVsDriftGapY->SetTitle("hitWidthVsDriftGapY");
+	hitWidthVsDriftGapY->GetXaxis()->SetTitle("driftGap [mm]");
+	hitWidthVsDriftGapY->GetYaxis()->SetTitle("average hit width [strips]");
+	hitWidthVsDriftGapY->Fit("pol1", "q");
+	hitWidthVsDriftGapY->Fit("pol2", "q");
 	hitWidthVsDriftGapY->Write("hitWidthVsDriftGapY");
 	fileCombined->Close();
 }
