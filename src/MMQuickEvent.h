@@ -27,14 +27,14 @@ struct sort_pair_first {
 };
 
 struct cutStatistics_t {
-	Int_t timingCuts;
-	Int_t chargeCuts;
-	Int_t timeCoincidenceCuts;
-	Int_t absolutePositionCuts;
-	Int_t proportionCuts;
-	Int_t fitMeanMaxChargeDistanceCuts;
-	Int_t fitProblems;
-
+	TH1F* timingCuts;
+	TH1F* chargeCuts;
+	TH1F* timeCoincidenceCuts;
+	TH1F* absolutePositionCuts;
+	TH1F* proportionXCuts;
+	TH1F* proportionYCuts;
+	TH1F* fitMeanMaxChargeDistanceCuts;
+	TH1F* fitProblemCuts;
 };
 
 class MMQuickEvent {
@@ -221,7 +221,7 @@ public:
 	bool runProportionCut(TH2F* maxNeighbourHisto,
 			vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTime,
 			short maxCharge, std::vector<std::pair<int, int> > proportionLimits,
-			cutStatistics_t& cutStat) {
+			cutStatistics_t& cutStat, TH1F* proportionCuts) {
 
 		// Sort cross section by absolute strip numbers (first entry in pairs)
 		std::sort(stripAndChargeAtMaxChargeTime.begin(),
@@ -279,12 +279,16 @@ public:
 			double proportion = NAN;
 			if (tooFarToTheRight || tooFarToTheLeft) {
 				if (accepEvent) {
-					cutStat.absolutePositionCuts++;
+					cutStat.absolutePositionCuts->Fill(1);
+				} else {
+					cutStat.absolutePositionCuts->Fill(0);
 				}
 				accepEvent = false;
 			} else if (!stripChargeIsStored && !lowerLimitIsZero) {
 				if (accepEvent) {
-					cutStat.proportionCuts++;
+					proportionCuts->Fill(1);
+				} else {
+					proportionCuts->Fill(0);
 				}
 				accepEvent = false;
 			} else {
@@ -299,7 +303,9 @@ public:
 							|| proportion
 									> proportionLimits[abs(deltaStrip) - 1].second) {
 						if (accepEvent) {
-							cutStat.proportionCuts++;
+							proportionCuts->Fill(1);
+						} else {
+							proportionCuts->Fill(0);
 						}
 						accepEvent = false;
 					}

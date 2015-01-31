@@ -16,6 +16,14 @@
 
 using namespace std;
 
+//Voltage range, needed for initialization of combined histograms (hier die Schritte von VD und VA angeben (amp stimmt schon)
+const int driftStart = 100;
+const int driftEnd = 400;
+const int driftSteps = 50;
+const int ampStart = 500;
+const int ampEnd = 550;
+const int ampSteps = 25;
+
 class MapFile {
 private:
 	static std::vector<std::pair<int, int> > neighbourStripeLimitsX;
@@ -42,6 +50,23 @@ public:
 
 	static std::vector<std::pair<int, int> > getProportionLimitsOfMaxHitNeighboursY() {
 		return neighbourStripeLimitsY;
+	}
+
+	int getVDbyFileName(std::string fileName) {
+		/*
+		 * VD275VA500.root -> 3 digits
+		 * VD50VA550.root  -> 2 digits
+		 * VD1205VA500.root-> 4 digits
+		 */
+		int numberOfDigits = 3;
+		if (fileName.at(4) == 'V') {
+			numberOfDigits = 2;
+		} else if (fileName.at(6) == 'V') {
+			numberOfDigits = 4;
+		}
+		int vd = atoi(fileName.substr(2, numberOfDigits).c_str());
+
+		return (atoi(fileName.substr(2, 3).c_str()));
 	}
 
 private:
@@ -263,6 +288,13 @@ private:
 					(Option_t*) "RECREATE");
 		} else {
 			std::cerr << "Unknown driftgap" << driftGap << std::endl;
+		}
+		/*
+		 * Add more non-limiting entries to show more bins on the histogram later on
+		 */
+		for (int i = 0; i < 3; i++) {
+			neighbourStripeLimitsX.push_back(std::make_pair(0, 100));
+			neighbourStripeLimitsY.push_back(std::make_pair(0, 100));
 		}
 	}
 
