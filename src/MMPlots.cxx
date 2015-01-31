@@ -96,6 +96,22 @@ bool storeHistogram(int eventNumber) {
 					&& MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 1000));
 }
 
+void fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
+		std::vector<double>& VDsForGraphs, std::vector<double>& hitWidthForVD,
+		std::vector<double>& hitWidthForVDError, double VD) {
+
+	// fit histrogram maxChargeDistribution with Gaussian distribution
+	mmhitWidthHisto->Fit("gaus", "Sq");
+	TF1* widthHistFitResult = mmhitWidthHisto->GetFunction("gaus");
+	if (widthHistFitResult) {
+		combinedWidthHisto->Fill(widthHistFitResult->GetParameter(1));
+		// Plot hit width vs VD
+		VDsForGraphs.push_back(VD);
+		hitWidthForVD.push_back(widthHistFitResult->GetParameter(1));
+		hitWidthForVDError.push_back(widthHistFitResult->GetParError(1));
+	}
+}
+
 /**
  * Generates a new 2D histogram (heatmap) showing all measured charges in all strips of x or y direction of all times slices.
  * The histogram will be stored at general_mapHist2DEvent[eventNumber+"nameOfHistogram"]
@@ -651,34 +667,17 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		/*
 		 * Fit hit width histogram
 		 */
-		TH1F* widthHistoX = general_mapHist1D["mmhitWidthX"];
-		// fit histrogram maxChargeDistribution with Gaussian distribution
-		widthHistoX->Fit("gaus", "Sq");
-		TF1* widthHistXFitResult = widthHistoX->GetFunction("gaus");
-		if (widthHistXFitResult) {
-			general_mapCombined1D["hitWidthX"]->Fill(
-					widthHistXFitResult->GetParameter(1));
-			// Plot hit width vs VD
-			VDsForGraphsX.push_back(MicroMegas.getVDbyFileName(Fitr->first));
-			hitWidthXForVD.push_back(widthHistXFitResult->GetParameter(1));
-			hitWidthXForVDError.push_back(widthHistXFitResult->GetParError(1));
-		}
+		fitHitWidhtHistogram(general_mapHist1D["mmhitWidthX"],
+				general_mapCombined1D["hitWidthX"], VDsForGraphsX,
+				hitWidthXForVD, hitWidthXForVDError,
+				MicroMegas.getVDbyFileName(Fitr->first));
 
-		TH1F* widthHistoY = general_mapHist1D["mmhitWidthY"];
-		// fit histrogram maYChargeDistribution with Gaussian distribution
-		widthHistoY->Fit("gaus", "Sq");
+		fitHitWidhtHistogram(general_mapHist1D["mmhitWidthY"],
+				general_mapCombined1D["hitWidthY"], VDsForGraphsY,
+				hitWidthYForVD, hitWidthYForVDError,
+				MicroMegas.getVDbyFileName(Fitr->first));
 
-		TF1* widthHistYFitResult = widthHistoY->GetFunction("gaus");
-		if (widthHistYFitResult) {
-			general_mapCombined1D["hitWidthY"]->Fill(
-					widthHistYFitResult->GetParameter(1));
-			// Plot hit width vs VD
-			VDsForGraphsY.push_back(MicroMegas.getVDbyFileName(Fitr->first));
-			hitWidthYForVD.push_back(widthHistYFitResult->GetParameter(1));
-			hitWidthYForVDError.push_back(widthHistYFitResult->GetParError(1));
-		}
-
-		float lengthOfMeasurement = 0.;
+//		float lengthOfMeasurement = 0.;
 //		if (!eventTimes.empty()) {
 //			// fill dtime + rate hist
 //			vector<double> ratesOverMeasurementTime;
@@ -712,8 +711,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		//delete m_event to clear cache
 		delete m_event;
 
-//TODO: Fill histograms which show results of all measurement
-//always remove "1" after the comment
 		fileCombined->cd();
 //		general_mapCombined["rate"]->SetBinContent(
 //				(atoi(Fitr->first.substr(2, 3).c_str()) - driftStart)
