@@ -491,12 +491,12 @@ public:
 		return vec_filename;
 	}
 
+	static double driftGap;
 private:
 	map<string, TFile*> m_mapFile;
 	string data_dir; // was "../../PhD/Detector/micromega_data/" before
 	string path;
 	string appendName;
-	static double driftGap;
 };
 
 #endif

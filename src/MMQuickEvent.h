@@ -35,6 +35,9 @@ struct cutStatistics_t {
 	TH1F* proportionYCuts;
 	TH1F* fitMeanMaxChargeDistanceCuts;
 	TH1F* fitProblemCuts;
+	std::string names[8] = { "timingCuts", "chargeCuts", "timeCoincidenceCuts",
+			"absolutePositionCuts", "proportionXCuts", "proportionYCuts",
+			"fitMeanMaxChargeDistanceCuts", "fitProblemCuts" };
 };
 
 class MMQuickEvent {
@@ -81,8 +84,8 @@ public:
 					<< m_actEventNumber << "/" << m_NumberOfEvents << ")...";
 			cout.flush();
 		} else if (m_actEventNumber == m_NumberOfEvents - 1) {
-			cout << '\r'
-					<< "[MMQuickEvent] Done!                              ";
+			cout << '\r' << "[MMQuickEvent] Done!                              "
+					<< std::endl;
 			cout.flush();
 		}
 		m_tchain->GetEvent(m_actEventNumber);

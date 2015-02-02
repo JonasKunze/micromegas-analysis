@@ -9,7 +9,7 @@
  * -1 means all events will be processed
  */
 #define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 5
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 2
 
 /*
  * Cuts
@@ -261,6 +261,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	} else {
 		cutStatistics.timingCuts->Fill(0);
 	}
+
 	general_mapCombined1D["timeDistribution"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
@@ -519,6 +520,21 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
+	general_mapCombined["chargeXfieldStrength"] = new TH2F(
+			"chargeXfieldStrength", ";Drift field strength [V/m] ;VAmp",
+			numberOfXBins, firstXBinValue / MicroMegas.driftGap,
+			lastXBinValue / MicroMegas.driftGap,
+			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
+			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
+			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
+	general_mapCombined["chargeYfieldStrength"] = new TH2F(
+			"chargeYfieldStrength", ";Drift field strength [V/m] ;VAmp",
+			numberOfXBins, firstXBinValue / MicroMegas.driftGap,
+			lastXBinValue / MicroMegas.driftGap,
+			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
+			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
+			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
+
 	general_mapCombined["chargeXuncut"] = new TH2F("chargeXuncut",
 			";VDrift ;VAmp", numberOfXBins, firstXBinValue, lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
@@ -561,34 +577,16 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	/*
 	 * Generate cut histograms
 	 */
-	general_mapCombined1D["timingCuts"] = new TH1F("timingCuts",
-			";nein/ja ;entries", 3, 0, 2);
-	general_mapCombined1D["chargeCuts"] = new TH1F("chargeCuts",
-			";nein/ja ;entries", 3, 0, 2);
-	general_mapCombined1D["timeCoincidenceCuts"] = new TH1F(
-			"timeCoincidenceCuts", ";nein/ja ;entries", 3, 0, 2);
-	general_mapCombined1D["absolutePositionCuts"] = new TH1F(
-			"absolutePositionCuts", ";nein/ja ;entries", 3, 0, 2);
-	general_mapCombined1D["proportionXCuts"] = new TH1F("proportionXCuts",
-			";nein/ja ;entries", 3, 0, 2);
-	general_mapCombined1D["proportionYCuts"] = new TH1F("proportionYCuts",
-			";nein/ja ;entries", 3, 0, 2);
-	general_mapCombined1D["fitMeanMaxChargeDistanceCuts"] = new TH1F(
-			"fitMeanMaxChargeDistanceCuts", ";nein/ja ;entries", 3, 0, 2);
-	general_mapCombined1D["fitProblemCuts"] = new TH1F("fitProblemCuts",
-			";nein/ja ;entries", 3, 0, 2);
+	for (unsigned int i = 0;
+			i < sizeof(cutStatistics.names) / sizeof(std::string); i++) {
+		std::string name = cutStatistics.names[i];
 
-	cutStatistics.timingCuts = general_mapCombined1D["timingCuts"];
-	cutStatistics.chargeCuts = general_mapCombined1D["chargeCuts"];
-	cutStatistics.timeCoincidenceCuts =
-			general_mapCombined1D["timeCoincidenceCuts"];
-	cutStatistics.absolutePositionCuts =
-			general_mapCombined1D["absolutePositionCuts"];
-	cutStatistics.proportionXCuts = general_mapCombined1D["proportionXCuts"];
-	cutStatistics.proportionYCuts = general_mapCombined1D["proportionYCuts"];
-	cutStatistics.fitMeanMaxChargeDistanceCuts =
-			general_mapCombined1D["fitMeanMaxChargeDistanceCuts"];
-	cutStatistics.fitProblemCuts = general_mapCombined1D["fitProblemCuts"];
+		TH1F* newHisto = (new TH1F(name.c_str(), ";nein/ja ;entries", 3, 0, 2));
+
+		memcpy(((char*) &cutStatistics) + i * sizeof(TH1F*), (char*) &newHisto,
+				sizeof(TH1F*));
+		general_mapCombined1D[name] = newHisto;
+	}
 
 	int numberOfRunsToProcess = mapFile.size();
 	if (MAX_NUM_OF_RUNS_TO_BE_PROCESSED < numberOfRunsToProcess
@@ -632,7 +630,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				";y cluster size [strips]; entries", 50, 0, 50.);
 		general_mapHist1D["mmclusterxUncut"] = new TH1F("mmclusterxUncut",
 				";x cluster size [strips]; entries", 50, 0, 50.);
-		general_mapHist1D["mmclusteryUncut"] = new TH1F("mmclusteryUncuts",
+		general_mapHist1D["mmclusteryUncut"] = new TH1F("mmclusteryUncut",
 				";y cluster size [strips]; entries", 50, 0, 50.);
 		general_mapHist1D["mmchargex"] = new TH1F("mmchargex",
 				";charge X; entries", 100, 0, 1000);
@@ -762,6 +760,19 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 						/ MicroMegas.ampSteps + 1,/*insert charge of Y here*/
 				general_mapHist1D["mmchargey"]->GetMean());
 
+		general_mapCombined["chargeXfieldStrength"]->SetBinContent(
+				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
+						/ MicroMegas.driftSteps + 1,
+				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
+						/ MicroMegas.ampSteps + 1,/*insert charge of X here*/
+				general_mapHist1D["mmchargex"]->GetMean());
+		general_mapCombined["chargeYfieldStrength"]->SetBinContent(
+				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
+						/ MicroMegas.driftSteps + 1,
+				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
+						/ MicroMegas.ampSteps + 1,/*insert charge of Y here*/
+				general_mapHist1D["mmchargey"]->GetMean());
+
 		general_mapCombined["chargeXuncut"]->SetBinContent(
 				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
 						/ MicroMegas.driftSteps + 1,
@@ -832,6 +843,21 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	averageHitwidthsY.push_back(general_mapCombined1D["hitWidthY"]->GetMean());
 	averageHitwidthsYError.push_back(
 			general_mapCombined1D["hitWidthY"]->GetMeanError());
+
+	/*
+	 * Print cut statistics
+	 */
+	std::cout << "############################################################"<<std::endl;
+	std::cout << "########## Cut statistics for " << MicroMegas.driftGap << " mm driftgap"<<" ##########"<<std::endl;
+	std::cout << "############################################################"<<std::endl;
+	std::cout << "Name\taccepted\tcut\t%cut"<<std::endl;
+	for (unsigned int i = 0;
+			i < sizeof(cutStatistics.names) / sizeof(std::string); i++) {
+		TH1F* histo = general_mapCombined1D[cutStatistics.names[i]];
+		double accepted = histo->GetBinContent(1);
+		double cut = histo->GetBinContent(2);
+		std::cout << cutStatistics.names[i] << "\t" << accepted << "\t" << cut << "\t" << cut/(accepted+cut)<<std::endl;
+	}
 
 //save combined plots
 	fileCombined->cd();
