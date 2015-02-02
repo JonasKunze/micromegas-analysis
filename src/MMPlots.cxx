@@ -8,8 +8,8 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 10000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 5
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
  * Cuts
@@ -20,14 +20,12 @@
 //#define MIN_CHARGE_X 0
 //#define MIN_CHARGE_Y 0
 
-#define MIN_TIMESLICE 3
-#define MAX_TIMESLICE 23
+#define MIN_TIMESLICE 2
+#define MAX_TIMESLICE 24
 #define MAX_XY_TIME_DIFFERENCE 1
 
 #define FIT_RANGE 20
 #define MAX_FIT_MEAN_DISTANCE_TO_MAX 2 // Number of strips
-
-#define RUN_FITS true
 
 using namespace std;
 
@@ -309,78 +307,60 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	TF1* gaussFitY = NULL;
 	TH1F* fitHistoX = NULL;
 	TH1F* fitHistoY = NULL;
-	if (RUN_FITS) {
-		int startFitRange = stripNumShowingSignal[event->stripWithMaxChargeX]
-				- FIT_RANGE / 2;
-		gaussFitX = fitGauss(event->stripAndChargeAtMaxChargeTimeX, eventNumber,
-				"maxChargeDistributionX", fitHistoX,
-				startFitRange > 0 ? startFitRange : 0,
-				stripNumShowingSignal[event->stripWithMaxChargeX]
-						+ FIT_RANGE / 2);
 
-		if (gaussFitX == NULL) {
-			cutStatistics.fitProblemCuts->Fill(0);
-			delete fitHistoX;
-			return false;
-		} else {
-			cutStatistics.fitProblemCuts->Fill(1);
-		}
-		/*
-		 * Check if the fit mean is close enough to the maximum
-		 */
-		double mean = gaussFitX->GetParameter(1);
-		if (abs(
-				stripNumShowingSignal[event->stripWithMaxChargeX]
-						- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
-			if (storeHistogram(eventNumber)) {
-				general_mapPlotFit[std::string(fitHistoX->GetName())] =
-						fitHistoX;
-			} else {
-				delete fitHistoX;
-				fitHistoX = NULL;
-			}
-			cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(0);
-		} else {
-			delete fitHistoX;
-			fitHistoX = NULL;
-			cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(1);
-		}
+	int startFitRange = stripNumShowingSignal[event->stripWithMaxChargeX]
+			- FIT_RANGE / 2;
+	gaussFitX = fitGauss(event->stripAndChargeAtMaxChargeTimeX, eventNumber,
+			"maxChargeDistributionX", fitHistoX,
+			startFitRange > 0 ? startFitRange : 0,
+			stripNumShowingSignal[event->stripWithMaxChargeX] + FIT_RANGE / 2);
 
-		gaussFitY = fitGauss(event->stripAndChargeAtMaxChargeTimeY, eventNumber,
-				"maxChargeDistributionY", fitHistoY,
-				stripNumShowingSignal[event->stripWithMaxChargeY]
-						- FIT_RANGE / 2,
-				stripNumShowingSignal[event->stripWithMaxChargeY]
-						+ FIT_RANGE / 2);
+	if (gaussFitX == NULL) {
+		cutStatistics.fitProblemCuts->Fill(1);
+		delete fitHistoX;
+		return false;
+	} else {
+		cutStatistics.fitProblemCuts->Fill(0);
+	}
+	/*
+	 * Check if the fit mean is close enough to the maximum
+	 */
+	double mean = gaussFitX->GetParameter(1);
+	if (abs(
+			stripNumShowingSignal[event->stripWithMaxChargeX]
+					- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+		delete fitHistoX;
+		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(1);
+		return false;
+	} else {
+		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(0);
+	}
 
-		if (gaussFitY == NULL) {
-			cutStatistics.fitProblemCuts->Fill(1);
-			delete fitHistoY;
-			return false;
-		} else {
-			cutStatistics.fitProblemCuts->Fill(0);
-		}
+	gaussFitY = fitGauss(event->stripAndChargeAtMaxChargeTimeY, eventNumber,
+			"maxChargeDistributionY", fitHistoY,
+			stripNumShowingSignal[event->stripWithMaxChargeY] - FIT_RANGE / 2,
+			stripNumShowingSignal[event->stripWithMaxChargeY] + FIT_RANGE / 2);
 
-		/*
-		 * Check if the fit mean is close enough to the maximum
-		 */
-		mean = gaussFitY->GetParameter(1);
-		if (abs(
-				stripNumShowingSignal[event->stripWithMaxChargeY]
-						- mean) < MAX_FIT_MEAN_DISTANCE_TO_MAX) {
-			if (storeHistogram(eventNumber)) {
-				general_mapPlotFit[std::string(fitHistoY->GetName())] =
-						fitHistoY;
-			} else {
-				delete fitHistoY;
-				fitHistoY = NULL;
-			}
-			cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(0);
-		} else {
-			delete fitHistoY;
-			fitHistoY = NULL;
-			cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(1);
-		}
+	if (gaussFitY == NULL) {
+		cutStatistics.fitProblemCuts->Fill(1);
+		delete fitHistoY;
+		return false;
+	} else {
+		cutStatistics.fitProblemCuts->Fill(0);
+	}
+
+	/*
+	 * Check if the fit mean is close enough to the maximum
+	 */
+	mean = gaussFitY->GetParameter(1);
+	if (abs(
+			stripNumShowingSignal[event->stripWithMaxChargeY]
+					- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+		delete fitHistoY;
+		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(1);
+		return false;
+	} else {
+		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(0);
 	}
 
 //storage after procession
@@ -428,10 +408,18 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		general_mapHist2D["mmhitmapGausCut"]->Fill(/*x value*/1,/*y value*/
 		1);
 
+		if (storeHistogram(eventNumber)) {
+			general_mapPlotFit[std::string(fitHistoX->GetName())] = fitHistoX;
+			general_mapPlotFit[std::string(fitHistoY->GetName())] = fitHistoY;
+		} else {
+			delete fitHistoY;
+			delete fitHistoX;
+		}
+
 	}
 
-	if (/*condition to fill general histograms*/!RUN_FITS
-			|| (gaussFitY != NULL && gaussFitX != NULL)) {
+	if (/*condition to fill general histograms*/(gaussFitY != NULL
+			&& gaussFitX != NULL)) {
 		// coincidence check between x and y signal (within 25ns)
 		general_mapHist2D["mmhitmap"]->Fill(
 				/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
@@ -449,10 +437,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		general_mapHist1D["mmhity"]->Fill(
 				/*strip y with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeY]);
 
-		/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		 * !!!!!!!!!!!!!!!!!!!!!! To be implemented!!!!!!!!!!!!!!!!!!!!!!!!!
-		 * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		 */
 		general_mapHist1D["mmclusterx"]->Fill(
 		/*number of x strips hit by one event*/event->numberOfXHits);
 		general_mapHist1D["mmclustery"]->Fill(
@@ -484,9 +468,9 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	const int TRGBURST = 8;
 
 //initialize file and histograms for combined output of all runs
-	int numberOfXBins = (driftEnd - driftStart) / driftSteps + 1;
-	double firstXBinValue = driftStart - 0.5 * driftSteps;
-	double lastXBinValue = driftEnd + 0.5 * driftSteps;
+	int numberOfXBins = (MicroMegas.driftEnd - MicroMegas.driftStart) / MicroMegas.driftSteps + 1;
+	double firstXBinValue = MicroMegas.driftStart - 0.5 * MicroMegas.driftSteps;
+	double lastXBinValue = MicroMegas.driftEnd + 0.5 * MicroMegas.driftSteps;
 
 	std::stringstream combinedFileName;
 	combinedFileName << outPath << MicroMegas.getDriftGap()
@@ -501,12 +485,21 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 //			ampEnd + 0.5 * ampSteps);
 	general_mapCombined["chargeX"] = new TH2F("chargeX", ";VDrift ;VAmp",
 			numberOfXBins, firstXBinValue, lastXBinValue,
-			(ampEnd - ampStart) / ampSteps + 1, ampStart - 0.5 * ampSteps,
-			ampEnd + 0.5 * ampSteps);
+			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1, MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
+			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeY"] = new TH2F("chargeY", ";VDrift ;VAmp",
 			numberOfXBins, firstXBinValue, lastXBinValue,
-			(ampEnd - ampStart) / ampSteps + 1, ampStart - 0.5 * ampSteps,
-			ampEnd + 0.5 * ampSteps);
+			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1, MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
+			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
+
+	general_mapCombined["chargeXuncut"] = new TH2F("chargeXuncut", ";VDrift ;VAmp",
+			numberOfXBins, firstXBinValue, lastXBinValue,
+			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1, MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
+			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
+	general_mapCombined["chargeYuncut"] = new TH2F("chargeYuncut", ";VDrift ;VAmp",
+			numberOfXBins, firstXBinValue, lastXBinValue,
+			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1, MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
+			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["mmhitneighboursX"] = new TH2F("mmhitneighboursX",
 			";distance [strips]; relative charge [% of max]", 21, -10, 10, 21,
@@ -718,18 +711,32 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 //				(atoi(Fitr->first.substr(7, 3).c_str()) - ampStart) / ampSteps
 //						+ 1,/*insert here number of events*/
 //				eventNumber / lengthOfMeasurement);
+
 		general_mapCombined["chargeX"]->SetBinContent(
-				(atoi(Fitr->first.substr(2, 3).c_str()) - driftStart)
-						/ driftSteps + 1,
-				(atoi(Fitr->first.substr(7, 3).c_str()) - ampStart) / ampSteps
+				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
+						/ MicroMegas.driftSteps + 1,
+				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart) / MicroMegas.ampSteps
 						+ 1,/*insert charge of X here*/
 				general_mapHist1D["mmchargex"]->GetMean());
 		general_mapCombined["chargeY"]->SetBinContent(
-				(atoi(Fitr->first.substr(2, 3).c_str()) - driftStart)
-						/ driftSteps + 1,
-				(atoi(Fitr->first.substr(7, 3).c_str()) - ampStart) / ampSteps
+				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
+						/ MicroMegas.driftSteps + 1,
+				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart) / MicroMegas.ampSteps
 						+ 1,/*insert charge of Y here*/
 				general_mapHist1D["mmchargey"]->GetMean());
+
+		general_mapCombined["chargeXuncut"]->SetBinContent(
+				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
+						/ MicroMegas.driftSteps + 1,
+				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart) / MicroMegas.ampSteps
+						+ 1,/*insert charge of X here*/
+				general_mapHist1D["mmchargexUncut"]->GetMean());
+		general_mapCombined["chargeYuncut"]->SetBinContent(
+				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
+						/ MicroMegas.driftSteps + 1,
+				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart) / MicroMegas.ampSteps
+						+ 1,/*insert charge of Y here*/
+				general_mapHist1D["mmchargexUncut"]->GetMean());
 
 		/// Saving Results
 		file0->mkdir("trees");

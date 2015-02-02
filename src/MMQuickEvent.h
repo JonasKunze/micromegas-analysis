@@ -245,7 +245,8 @@ public:
 		/*
 		 * Start at strip N left to the maximum charge strip where N is the number of entries in the propotion limits file
 		 */
-		bool accepEvent = true;
+		bool absolutePositionCut = false;
+		bool proportionCut = false;
 		const int maxDistance = proportionLimits.size();
 		for (int deltaStrip = -maxDistance; deltaStrip <= maxDistance;
 				deltaStrip++) {
@@ -278,19 +279,9 @@ public:
 
 			double proportion = NAN;
 			if (tooFarToTheRight || tooFarToTheLeft) {
-				if (accepEvent) {
-					cutStat.absolutePositionCuts->Fill(1);
-				} else {
-					cutStat.absolutePositionCuts->Fill(0);
-				}
-				accepEvent = false;
+				absolutePositionCut = true;
 			} else if (!stripChargeIsStored && !lowerLimitIsZero) {
-				if (accepEvent) {
-					proportionCuts->Fill(1);
-				} else {
-					proportionCuts->Fill(0);
-				}
-				accepEvent = false;
+				proportionCut = true;
 			} else {
 				if (stripChargeIsStored) {
 					proportion =
@@ -302,12 +293,7 @@ public:
 					if (proportion < proportionLimits[abs(deltaStrip) - 1].first
 							|| proportion
 									> proportionLimits[abs(deltaStrip) - 1].second) {
-						if (accepEvent) {
-							proportionCuts->Fill(1);
-						} else {
-							proportionCuts->Fill(0);
-						}
-						accepEvent = false;
+						proportionCut = true;
 					}
 				}
 			}
@@ -317,7 +303,20 @@ public:
 				maxNeighbourHisto->Fill((deltaStrip), proportion);
 			}
 		}
-		return accepEvent;
+
+		if (absolutePositionCut) {
+			cutStat.absolutePositionCuts->Fill(1);
+		} else {
+			cutStat.absolutePositionCuts->Fill(0);
+
+			if (proportionCut) {
+				proportionCuts->Fill(1);
+			} else {
+				proportionCuts->Fill(0);
+			}
+		}
+
+		return !absolutePositionCut && !proportionCut;
 	}
 
 	void findMaxCharge() {
