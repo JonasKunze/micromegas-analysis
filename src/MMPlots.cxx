@@ -8,8 +8,8 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 2
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
  * Cuts
@@ -577,15 +577,13 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	/*
 	 * Generate cut histograms
 	 */
+	TH1F** histoGramms = (TH1F**) &cutStatistics;
 	for (unsigned int i = 0;
 			i < sizeof(cutStatistics.names) / sizeof(std::string); i++) {
 		std::string name = cutStatistics.names[i];
 
-		TH1F* newHisto = (new TH1F(name.c_str(), ";nein/ja ;entries", 3, 0, 2));
-
-		memcpy(((char*) &cutStatistics) + i * sizeof(TH1F*), (char*) &newHisto,
-				sizeof(TH1F*));
-		general_mapCombined1D[name] = newHisto;
+		histoGramms[i] = new TH1F(name.c_str(), ";nein/ja ;entries", 3, 0, 2);
+		general_mapCombined1D[name] = histoGramms[i];
 	}
 
 	int numberOfRunsToProcess = mapFile.size();
