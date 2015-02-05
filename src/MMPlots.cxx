@@ -9,8 +9,8 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 2
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 100000
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
  * Cuts
@@ -95,8 +95,8 @@ cutStatistics_t cutStatistics;
 
 //set output path and name of output files
 const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
-//const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
-const string outPath = "/tmp/output/"; // Path of the Output
+const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
+//const string outPath = "/tmp/output/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
 const string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war. Es können unter anderem angeschaut werden Raten in abhängigkeit der Spannung
 
