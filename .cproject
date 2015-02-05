@@ -57,6 +57,11 @@
 									<listOptionValue builtIn="false" value="Core"/>
 									<listOptionValue builtIn="false" value="Cint"/>
 									<listOptionValue builtIn="false" value="Tree"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="Graf"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="m"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="Postscript"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="Rint"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="Gpad"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1880089163" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

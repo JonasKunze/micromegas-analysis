@@ -4,12 +4,13 @@
 #include "TGraphErrors.h"
 #include "TFitResultPtr.h"
 #include "TFitResult.h"
+#include "TCanvas.h"
 /*
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 1000000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 2
 
 /*
  * Cuts
@@ -94,8 +95,8 @@ cutStatistics_t cutStatistics;
 
 //set output path and name of output files
 const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
-const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
-//const string outPath = "/tmp/"; // Path of the Output
+//const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
+const string outPath = "/tmp/output/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
 const string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war. Es können unter anderem angeschaut werden Raten in abhängigkeit der Spannung
 
@@ -484,12 +485,26 @@ void plotGraph(std::string name, std::string xTitle,
 	hitWidthVsV.GetXaxis()->SetTitle(xTitle.c_str());
 	hitWidthVsV.GetYaxis()->SetTitle("average hit width [strips]");
 	hitWidthVsV.SetDrawOption("AP");
-	hitWidthVsV.Paint("AP");
 	hitWidthVsV.SetMarkerColor(4);
 	hitWidthVsV.SetMarkerStyle(21);
 
 	hitWidthVsV.Fit("pol1", "q");
 	hitWidthVsV.Write(hitWidthVsV.GetTitle());
+}
+
+void writeHistoToPDF(TH1* histo, double driftGap) {
+	std::stringstream pdfName;
+	pdfName << outPath << driftGap << "/";
+
+	std::stringstream mkdir;
+	mkdir << "mkdir -p " << pdfName.str();
+	system(mkdir.str().c_str());
+
+	pdfName << histo->GetName() << ".pdf";
+
+	TCanvas canvas("c1", "sub data", 200, 10, 700, 500);
+	histo->Draw("colz");
+	canvas.Print(pdfName.str().c_str(), "pdf");
 }
 
 // Main Program
@@ -874,6 +889,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	fileCombined->cd();
 	for (map<string, TH2F*>::iterator iter = general_mapCombined.begin();
 			iter != general_mapCombined.end(); iter++) {
+		writeHistoToPDF(iter->second, MicroMegas.driftGap);
 		iter->second->Write();
 		delete iter->second;
 	}
@@ -883,6 +899,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	for (map<string, TH1F*>::iterator iter = general_mapCombined1D.begin();
 			iter != general_mapCombined1D.end(); iter++) {
 
+		fileCombined->cd();
 		std::string ending = "Cuts";
 		std::string name = iter->first;
 		bool isCutHisto = false;
@@ -893,10 +910,16 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		}
 
 		iter->second->Write();
-		delete iter->second;
+
 		if (isCutHisto) {
 			gDirectory->cd("..");
+		} else {
+			/*
+			 * write PDF
+			 */
+			writeHistoToPDF(iter->second, MicroMegas.driftGap);
 		}
+		delete iter->second;
 	}
 
 	/*
