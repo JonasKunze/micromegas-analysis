@@ -27,7 +27,7 @@
 									<listOptionValue builtIn="false" value="/usr/local/include/root/"/>
 									<listOptionValue builtIn="false" value="/usr/lib/root/include/"/>
 								</option>
-								<option id="gnu.cpp.compiler.option.other.other.1163533817" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.other.other.1163533817" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0 -std=c++11" valueType="string"/>
 								<option id="gnu.cpp.compiler.option.dialect.std.704248176" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" value="gnu.cpp.compiler.dialect.c++98" valueType="enumerated"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1062392162" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>

@@ -10,7 +10,7 @@ INCLUDEFLAGS = -I./
 LD_FLAGS = -lmycode
 
 ROOTLIBS = `root-config --libs` -lFoam -lMinuit -lTreePlayer
-ROOTCFLAGS = $(shell root-config --cflags) -O3
+ROOTCFLAGS = $(shell root-config --cflags) -O3 -std=c++11
 ROOTGLIBS = $(shell root-config --glibs)
 PWD = $(shell pwd)
 

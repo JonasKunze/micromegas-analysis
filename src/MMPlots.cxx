@@ -5,11 +5,12 @@
 #include "TFitResultPtr.h"
 #include "TFitResult.h"
 #include "TCanvas.h"
+#include <set>
 /*
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 100000
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
@@ -115,7 +116,7 @@ bool storeHistogram(int eventNumber) {
 void fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		std::vector<double>& VDsForGraphs, std::vector<double>& VAsForGraphs,
 		std::vector<double>& hitWidthForGraphs,
-		std::vector<double>& hitWidthForVDError, double VD, double VA) {
+		std::vector<double>& hitWidthForVDError, int VD, int VA) {
 
 	// fit histrogram maxChargeDistribution with Gaussian distribution
 	mmhitWidthHisto->Fit("gaus", "Sq");
@@ -470,16 +471,34 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	return true;
 }
 
+/*
+ * xValues, hitWidhts, hitWidthErrors and parameters must all have the same number of values
+ *
+ * (xValues[i]+-1, hitWidths[i]+-hitWidthErros[i]) will be plotted for all i with parameters[i]==parameterValue
+ */
 void plotGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, std::vector<double> hitWidths,
-		std::vector<double> hitWidthErrors) {
-	double vErrors[xValues.size()];
-	for (unsigned int i = 0; i < xValues.size(); i++) {
+		std::vector<double> hitWidthErrors, std::vector<double> parameters,
+		double parameterValue, double driftGap) {
+
+	std::vector<double> xValuesFiltered;
+	std::vector<double> yValuesFiltered;
+	std::vector<double> yValueErrorsFiltered;
+	for (int i = 0; i < xValues.size(); i++) {
+		if (parameters[i] == parameterValue) {
+			xValuesFiltered.push_back(xValues[i]);
+			yValuesFiltered.push_back(hitWidths[i]);
+			yValueErrorsFiltered.push_back(hitWidthErrors[i]);
+		}
+	}
+
+	double vErrors[xValuesFiltered.size()];
+	for (unsigned int i = 0; i < xValuesFiltered.size(); i++) {
 		vErrors[i] = 1;
 	}
 
-	TGraphErrors hitWidthVsV(xValues.size(), &xValues[0], &hitWidths[0],
-			vErrors, &hitWidthErrors[0]);
+	TGraphErrors hitWidthVsV(xValuesFiltered.size(), &xValuesFiltered[0],
+			&yValuesFiltered[0], vErrors, &yValueErrorsFiltered[0]);
 	hitWidthVsV.SetTitle(name.c_str());
 	hitWidthVsV.SetName(hitWidthVsV.GetTitle());
 	hitWidthVsV.GetXaxis()->SetTitle(xTitle.c_str());
@@ -490,6 +509,14 @@ void plotGraph(std::string name, std::string xTitle,
 
 	hitWidthVsV.Fit("pol1", "q");
 	hitWidthVsV.Write(hitWidthVsV.GetTitle());
+
+
+	std::stringstream pdfName;
+	pdfName << outPath << driftGap << "/" << hitWidthVsV.GetName() << ".pdf";
+
+	TCanvas canvas("c1", "sub data", 200, 10, 700, 500);
+	hitWidthVsV.Draw("AP");
+	canvas.Print(pdfName.str().c_str(), "pdf");
 }
 
 void writeHistoToPDF(TH1* histo, double driftGap) {
@@ -925,15 +952,31 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	/*
 	 * Fit and write the graphs
 	 */
-	plotGraph("hitWidthVsVDX", "VD [V]", VDsForGraphsX, hitWidthsX,
-			hitWidthsXErrors);
-	plotGraph("hitWidthVsVDY", "VD [V]", VDsForGraphsY, hitWidthsY,
-			hitWidthsYErrors);
+	std::set<int> allVAs, allVDs; // TreeSet to make every entry stored only once
+	allVAs.insert(VAsForGraphsX.begin(), VAsForGraphsX.end());
+	allVDs.insert(VDsForGraphsX.begin(), VDsForGraphsX.end());
 
-	plotGraph("hitWidthVsVAX", "VA [V]", VAsForGraphsX, hitWidthsX,
-			hitWidthsXErrors);
-	plotGraph("hitWidthVsVAY", "VA [V]", VAsForGraphsY, hitWidthsY,
-			hitWidthsYErrors);
+	for (int VA : allVAs) {
+		std::stringstream name;
+		name << "hitWidthVsVDX-VA" << VA;
+		plotGraph(name.str(), "VD [V]", VDsForGraphsX, hitWidthsX,
+				hitWidthsXErrors, VAsForGraphsX, VA, MicroMegas.driftGap);
+		name.str("");
+		name << "hitWidthVsVDY-VA" << VA;
+		plotGraph(name.str(), "VD [V]", VDsForGraphsY, hitWidthsY,
+				hitWidthsYErrors, VAsForGraphsY, VA, MicroMegas.driftGap);
+	}
+
+	for (int VD : allVDs) {
+		std::stringstream name;
+		name << "hitWidthVsVAX-VD" << VD;
+		plotGraph(name.str(), "VA [V]", VAsForGraphsX, hitWidthsX,
+				hitWidthsXErrors, VDsForGraphsX, VD, MicroMegas.driftGap);
+		name.str("");
+		name << "hitWidthVsVAY-VD" << VD;
+		plotGraph(name.str(), "VA [V]", VAsForGraphsY, hitWidthsY,
+				hitWidthsYErrors, VDsForGraphsY, VD, MicroMegas.driftGap);
+	}
 
 	fileCombined->Close();
 }
