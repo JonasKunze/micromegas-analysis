@@ -71,6 +71,21 @@ struct maxi_t {
 	Int_t number;
 };
 
+struct cutStatistics_t {
+	TH1F* timingCuts;
+	TH1F* chargeCuts;
+	TH1F* timeCoincidenceCuts;
+	TH1F* absolutePositionCutsX;
+	TH1F* absolutePositionCutsY;
+	TH1F* proportionXCuts;
+	TH1F* proportionYCuts;
+	TH1F* fitMeanMaxChargeDistanceCuts;
+	TH1F* fitProblemCuts;
+	std::string names[9] = { "timingCuts", "chargeCuts", "timeCoincidenceCuts",
+			"absolutePositionCutsX", "absolutePositionCutsY", "proportionXCuts", "proportionYCuts",
+			"fitMeanMaxChargeDistanceCuts", "fitProblemCuts" };
+};
+
 gauss_t gauss;
 maxi_t maxi;
 cutStatistics_t cutStatistics;
@@ -145,6 +160,8 @@ void generateEventDisplay(MMQuickEvent* event) {
 			numberOfTimeSlices, 0, numberOfTimeSlices - 1);
 
 	// Store the new histogram in the global map
+	eventDisplayX->GetName();
+	eventDisplayY->GetName();
 	general_mapHist2DEvent[histoNameX] = eventDisplayX;
 	general_mapHist2DEvent[histoNameY] = eventDisplayY;
 
@@ -224,14 +241,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	vector<short> maxChargeOfStrip = *event->apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time slices
 	vector<short> timeSliceOfMaxChargeOfStrip = *event->apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time slice of the corresponding maximum charge (see above)
 
-	// Empty event cut
-	if (timeSliceOfMaxChargeOfStrip.empty()) {
-		cutStatistics.emptyEventCuts->Fill(1);
-		return false;
-	} else {
-		cutStatistics.emptyEventCuts->Fill(0);
-	}
-
 	/*
 	 * 1. Create event display
 	 *
@@ -300,19 +309,22 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	bool acceptEventX = event->runProportionCut(
 			general_mapCombined["mmhitneighboursX"],
 			event->stripAndChargeAtMaxChargeTimeX, event->maxChargeX,
-			MapFile::getProportionLimitsOfMaxHitNeighboursX(), cutStatistics,
-			cutStatistics.proportionXCuts);
+			MapFile::getProportionLimitsOfMaxHitNeighboursX(),
+			cutStatistics.absolutePositionCutsY, cutStatistics.proportionXCuts);
 
 	bool acceptEventY = event->runProportionCut(
 			general_mapCombined["mmhitneighboursY"],
 			event->stripAndChargeAtMaxChargeTimeY, event->maxChargeY,
-			MapFile::getProportionLimitsOfMaxHitNeighboursY(), cutStatistics,
-			cutStatistics.proportionYCuts);
+			MapFile::getProportionLimitsOfMaxHitNeighboursY(),
+			cutStatistics.absolutePositionCutsY, cutStatistics.proportionYCuts);
 
 	if (!acceptEventX || !acceptEventY) {
 		return false;
 	}
 
+	/*
+	 * Fit hits
+	 */
 	TF1* gaussFitX = NULL;
 	TF1* gaussFitY = NULL;
 	TH1F* fitHistoX = NULL;
@@ -330,8 +342,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		cutStatistics.fitProblemCuts->Fill(1);
 		delete fitHistoX;
 		return false;
-	} else {
-		cutStatistics.fitProblemCuts->Fill(0);
 	}
 	/*
 	 * Check if the fit mean is close enough to the maximum
@@ -342,6 +352,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			stripNumShowingSignal[event->stripWithMaxChargeX]
 					- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 		delete fitHistoX;
+		cutStatistics.fitProblemCuts->Fill(0);
 		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(1);
 		return false;
 	} else {
@@ -782,10 +793,15 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				general_mapHist1D["mmchargexUncut"]->GetMean());
 
 		/// Saving Results
-		file0->mkdir("trees");
-		file0->cd("trees");
-
 		/// loop over map of the plots for saving
+		gDirectory->mkdir("2D_Events");
+		gDirectory->cd("2D_Events");
+		for (map<string, TH2F*>::iterator iter = general_mapHist2DEvent.begin();
+				iter != general_mapHist2DEvent.end(); iter++) {
+			iter->second->GetName();
+			iter->second->Write();
+			delete iter->second;
+		}
 		for (map<string, TH1F*>::iterator iter = general_mapHist1D.begin();
 				iter != general_mapHist1D.end(); iter++) {
 			iter->second->SetOption("error");
@@ -795,13 +811,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		for (map<string, TH2F*>::iterator iter = general_mapHist2D.begin();
 				iter != general_mapHist2D.end(); iter++) {
 			iter->second->SetOption("error");
-			iter->second->Write();
-			delete iter->second;
-		}
-		gDirectory->mkdir("2D_Events");
-		gDirectory->cd("2D_Events");
-		for (map<string, TH2F*>::iterator iter = general_mapHist2DEvent.begin();
-				iter != general_mapHist2DEvent.end(); iter++) {
 			iter->second->Write();
 			delete iter->second;
 		}

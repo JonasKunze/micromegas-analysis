@@ -26,23 +26,6 @@ struct sort_pair_first {
 	}
 };
 
-struct cutStatistics_t {
-	TH1F* emptyEventCuts;
-	TH1F* timingCuts;
-	TH1F* chargeCuts;
-	TH1F* timeCoincidenceCuts;
-	TH1F* absolutePositionCuts;
-	TH1F* proportionXCuts;
-	TH1F* proportionYCuts;
-	TH1F* fitMeanMaxChargeDistanceCuts;
-	TH1F* fitProblemCuts;
-	std::string names[9] =
-			{ "emptyEventCuts", "timingCuts", "chargeCuts",
-					"timeCoincidenceCuts", "absolutePositionCuts",
-					"proportionXCuts", "proportionYCuts",
-					"fitMeanMaxChargeDistanceCuts", "fitProblemCuts" };
-};
-
 class MMQuickEvent {
 public:
 	MMQuickEvent(vector<string> vecFilenames, string Tree_Name,
@@ -217,7 +200,7 @@ public:
 	bool runProportionCut(TH2F* maxNeighbourHisto,
 			vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTime,
 			short maxCharge, std::vector<std::pair<int, int> > proportionLimits,
-			cutStatistics_t& cutStat, TH1F* proportionCuts) {
+			TH1F* absolutePositionCuts, TH1F* proportionCuts) {
 
 		if (stripAndChargeAtMaxChargeTime.size() == 0) {
 			return false;
@@ -305,9 +288,9 @@ public:
 		}
 
 		if (absolutePositionCut) {
-			cutStat.absolutePositionCuts->Fill(1);
+			absolutePositionCuts->Fill(1);
 		} else {
-			cutStat.absolutePositionCuts->Fill(0);
+			absolutePositionCuts->Fill(0);
 
 			if (proportionCut) {
 				proportionCuts->Fill(1);
