@@ -8,7 +8,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 5000
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
@@ -224,6 +224,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	vector<short> maxChargeOfStrip = *event->apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time slices
 	vector<short> timeSliceOfMaxChargeOfStrip = *event->apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time slice of the corresponding maximum charge (see above)
 
+	// Empty event cut
 	if (timeSliceOfMaxChargeOfStrip.empty()) {
 		cutStatistics.emptyEventCuts->Fill(1);
 		return false;
@@ -236,9 +237,10 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 *
 	 * Reduce the number of event display to a reasonable number
 	 */
-//	if (storeHistogram(event->getCurrentEventNumber())) {
-//		generateEventDisplay(event);
-//	}
+	if (storeHistogram(event->getCurrentEventNumber())) {
+		generateEventDisplay(event);
+	}
+
 	/*
 	 * 2. Find maximum charge
 	 */
@@ -256,9 +258,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	general_mapCombined1D["timeDistributionUncut"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
-	/*
-	 * Charge cut
-	 */
+	// Charge cut
 	if (event->maxChargeX < MIN_CHARGE_X || event->maxChargeY < MIN_CHARGE_Y) {
 		cutStatistics.chargeCuts->Fill(1);
 		return false;
@@ -266,9 +266,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		cutStatistics.chargeCuts->Fill(0);
 	}
 
-	/*
-	 * Timing cut
-	 */
+	// Timing cut
 	if (event->timeSliceOfMaxChargeX < MIN_TIMESLICE
 			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE
 			|| event->timeSliceOfMaxChargeY < MIN_TIMESLICE
@@ -298,6 +296,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	event->generateFixedTimeCrossSections();
 
+
+	// Proportion cuts
 	bool acceptEventX = event->runProportionCut(
 			general_mapCombined["mmhitneighboursX"],
 			event->stripAndChargeAtMaxChargeTimeX, event->maxChargeX,
@@ -326,6 +326,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			startFitRange > 0 ? startFitRange : 0,
 			stripNumShowingSignal[event->stripWithMaxChargeX] + FIT_RANGE / 2);
 
+	// fit problem cut
 	if (gaussFitX == NULL) {
 		cutStatistics.fitProblemCuts->Fill(1);
 		delete fitHistoX;
@@ -336,6 +337,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	/*
 	 * Check if the fit mean is close enough to the maximum
 	 */
+	// fit mean distance cut
 	double mean = gaussFitX->GetParameter(1);
 	if (abs(
 			stripNumShowingSignal[event->stripWithMaxChargeX]
@@ -409,15 +411,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		maxi.number = eventNumber;
 
 		general_mapTree["fits"]->Fill();
-
-		/*
-		 * ???
-		 * Was ist hier gefragt? Was ist der unterschied zu mmhitmap
-		 */
-		general_mapHist2D["mmhitmapMaxCut"]->Fill(/*x value*/1,/*y value*/
-		1);
-		general_mapHist2D["mmhitmapGausCut"]->Fill(/*x value*/1,/*y value*/
-		1);
 
 		if (storeHistogram(eventNumber)) {
 			general_mapPlotFit[std::string(fitHistoX->GetName())] = fitHistoX;
@@ -665,12 +658,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		general_mapHist2D["mmhitmap"] = new TH2F("mmhitmap",
 				";x [strips]; y [strips]", xStrips, 0, xStrips, yStrips, 0,
 				yStrips);
-		general_mapHist2D["mmhitmapMaxCut"] = new TH2F("mmhitmapMaxCut",
-				";x [strips]; y [strips]", xStrips, 0, xStrips, yStrips, 0,
-				yStrips);
-		general_mapHist2D["mmhitmapGausCut"] = new TH2F("mmhitmapGausCut",
-				";x [strips]; y [strips]", xStrips * 4, 0, xStrips, yStrips * 4,
-				0, yStrips);
 
 		//initialize trees with structure defined above
 		TTree* fitTree = new TTree("T", "results of gauss fit");
