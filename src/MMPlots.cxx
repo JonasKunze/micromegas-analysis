@@ -310,13 +310,13 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			general_mapCombined["mmhitneighboursX"],
 			event->stripAndChargeAtMaxChargeTimeX, event->maxChargeX,
 			MapFile::getProportionLimitsOfMaxHitNeighboursX(),
-			cutStatistics.absolutePositionCutsY, cutStatistics.proportionXCuts);
+			cutStatistics.absolutePositionCutsY, cutStatistics.proportionXCuts, false);
 
 	bool acceptEventY = event->runProportionCut(
 			general_mapCombined["mmhitneighboursY"],
 			event->stripAndChargeAtMaxChargeTimeY, event->maxChargeY,
 			MapFile::getProportionLimitsOfMaxHitNeighboursY(),
-			cutStatistics.absolutePositionCutsY, cutStatistics.proportionYCuts);
+			cutStatistics.absolutePositionCutsY, cutStatistics.proportionYCuts, acceptEventX);
 
 	if (!acceptEventX || !acceptEventY) {
 		return false;
@@ -793,6 +793,8 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				general_mapHist1D["mmchargexUncut"]->GetMean());
 
 		/// Saving Results
+		file0->cd();
+
 		/// loop over map of the plots for saving
 		gDirectory->mkdir("2D_Events");
 		gDirectory->cd("2D_Events");

@@ -200,7 +200,8 @@ public:
 	bool runProportionCut(TH2F* maxNeighbourHisto,
 			vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTime,
 			short maxCharge, std::vector<std::pair<int, int> > proportionLimits,
-			TH1F* absolutePositionCuts, TH1F* proportionCuts) {
+			TH1F* absolutePositionCuts, TH1F* proportionCuts,
+			bool lastProportionCut) {
 
 		if (stripAndChargeAtMaxChargeTime.size() == 0) {
 			return false;
@@ -287,15 +288,17 @@ public:
 			}
 		}
 
-		if (absolutePositionCut) {
-			absolutePositionCuts->Fill(1);
-		} else {
-			absolutePositionCuts->Fill(0);
-
-			if (proportionCut) {
-				proportionCuts->Fill(1);
+		if (!lastProportionCut) {
+			if (absolutePositionCut) {
+				absolutePositionCuts->Fill(1);
 			} else {
-				proportionCuts->Fill(0);
+				absolutePositionCuts->Fill(0);
+
+				if (proportionCut) {
+					proportionCuts->Fill(1);
+				} else {
+					proportionCuts->Fill(0);
+				}
 			}
 		}
 
