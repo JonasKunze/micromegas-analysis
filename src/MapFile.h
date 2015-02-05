@@ -33,10 +33,10 @@ public:
 
 	static std::vector<double> getAvailableDriftGaps() {
 		std::vector<double> gaps;
-//		gaps.push_back(4.5);
-//		gaps.push_back(8.0);
+		gaps.push_back(4.5);
+		gaps.push_back(8.0);
 		gaps.push_back(10.5);
-//		gaps.push_back(15.5);
+		gaps.push_back(15.5);
 		return gaps;
 	}
 
