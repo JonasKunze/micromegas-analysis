@@ -16,7 +16,6 @@
 
 using namespace std;
 
-
 class MapFile {
 private:
 	static std::vector<std::pair<int, int> > neighbourStripeLimitsX;
@@ -30,13 +29,13 @@ public:
 	int ampEnd;
 	int ampSteps;
 
-
 	static std::vector<double> getAvailableDriftGaps() {
 		std::vector<double> gaps;
 		gaps.push_back(4.5);
 		gaps.push_back(8.0);
 		gaps.push_back(10.5);
 		gaps.push_back(15.5);
+//		gaps.push_back(-1);
 		return gaps;
 	}
 
@@ -322,6 +321,35 @@ private:
 			m_mapFile["VD622VA550"] = new TFile(
 					(path + appendName + "_VD622VA550.root").c_str(),
 					(Option_t*) "RECREATE");
+		} else if (driftGap == -1) {
+			driftStart = 89;
+			driftEnd = 622;
+			driftSteps = 133;
+			ampStart = 500;
+			ampEnd = 550;
+			ampSteps = 25;
+
+//			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
+//			neighbourStripeLimitsX.push_back(std::make_pair(5, 70));
+//			neighbourStripeLimitsX.push_back(std::make_pair(0, 35));
+
+//			neighbourStripeLimitsY.push_back(std::make_pair(40, 100));
+//			neighbourStripeLimitsY.push_back(std::make_pair(10, 70));
+//			neighbourStripeLimitsY.push_back(std::make_pair(1, 40));
+//			neighbourStripeLimitsY.push_back(std::make_pair(0, 30));
+
+			m_mapFile["VD222VA525-run528"] = new TFile(
+					(path + appendName + "_VD222VA525-run528.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD222VA525-run534"] = new TFile(
+					(path + appendName + "_VD222VA525-run534.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD222VA525-run535"] = new TFile(
+					(path + appendName + "_VD222VA525-run535.root").c_str(),
+					(Option_t*) "RECREATE");
+			m_mapFile["VD222VA525-run536"] = new TFile(
+					(path + appendName + "_VD222VA525-run536.root").c_str(),
+					(Option_t*) "RECREATE");
 		} else {
 			std::cerr << "Unknown driftgap" << driftGap << std::endl;
 		}
@@ -486,8 +514,15 @@ public:
 			vec_filename.push_back(data_dir + "run522.root");
 		} else if (type == "VD622VA550") {
 			vec_filename.push_back(data_dir + "run524.root");
+		} else if (type == "VD222VA525-run528") {
+			vec_filename.push_back(data_dir + "run528.root");
+		} else if (type == "VD222VA525-run534") {
+			vec_filename.push_back(data_dir + "run534.root");
+		} else if (type == "VD222VA525-run535") {
+			vec_filename.push_back(data_dir + "run535.root");
+		} else if (type == "VD222VA525-run536") {
+			vec_filename.push_back(data_dir + "run536.root");
 		}
-
 		return vec_filename;
 	}
 
