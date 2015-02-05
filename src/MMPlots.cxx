@@ -81,9 +81,11 @@ struct cutStatistics_t {
 	TH1F* proportionYCuts;
 	TH1F* fitMeanMaxChargeDistanceCuts;
 	TH1F* fitProblemCuts;
-	std::string names[9] = { "timingCuts", "chargeCuts", "timeCoincidenceCuts",
-			"absolutePositionCutsX", "absolutePositionCutsY", "proportionXCuts", "proportionYCuts",
-			"fitMeanMaxChargeDistanceCuts", "fitProblemCuts" };
+	std::string names[9] =
+			{ "timingCuts", "chargeCuts", "timeCoincidenceCuts",
+					"absolutePositionCutsX", "absolutePositionCutsY",
+					"proportionXCuts", "proportionYCuts",
+					"fitMeanMaxChargeDistanceCuts", "fitProblemCuts" };
 };
 
 gauss_t gauss;
@@ -249,7 +251,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 //	if (storeHistogram(event->getCurrentEventNumber())) {
 //		generateEventDisplay(event);
 //	}
-
 	/*
 	 * 2. Find maximum charge
 	 */
@@ -310,13 +311,15 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			general_mapCombined["mmhitneighboursX"],
 			event->stripAndChargeAtMaxChargeTimeX, event->maxChargeX,
 			MapFile::getProportionLimitsOfMaxHitNeighboursX(),
-			cutStatistics.absolutePositionCutsY, cutStatistics.proportionXCuts, false);
+			cutStatistics.absolutePositionCutsY, cutStatistics.proportionXCuts,
+			false);
 
 	bool acceptEventY = event->runProportionCut(
 			general_mapCombined["mmhitneighboursY"],
 			event->stripAndChargeAtMaxChargeTimeY, event->maxChargeY,
 			MapFile::getProportionLimitsOfMaxHitNeighboursY(),
-			cutStatistics.absolutePositionCutsY, cutStatistics.proportionYCuts, acceptEventX);
+			cutStatistics.absolutePositionCutsY, cutStatistics.proportionYCuts,
+			acceptEventX);
 
 	if (!acceptEventX || !acceptEventY) {
 		return false;
@@ -534,15 +537,15 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 
 	general_mapCombined["chargeXfieldStrength"] = new TH2F(
 			"chargeXfieldStrength", ";Drift field strength [kV/m] ;VAmp [V]",
-			numberOfXBins, firstXBinValue  / MicroMegas.driftGap,
-			lastXBinValue  / MicroMegas.driftGap,
+			numberOfXBins, firstXBinValue / MicroMegas.driftGap,
+			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeYfieldStrength"] = new TH2F(
 			"chargeYfieldStrength", ";Drift field strength [kV/m] ;VAmp [V]",
-			numberOfXBins, firstXBinValue  / MicroMegas.driftGap,
-			lastXBinValue  / MicroMegas.driftGap,
+			numberOfXBins, firstXBinValue / MicroMegas.driftGap,
+			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
@@ -778,7 +781,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
 						/ MicroMegas.ampSteps + 1,/*insert charge of Y here*/
 				general_mapHist1D["mmchargey"]->GetMean());
-
 		general_mapCombined["chargeXuncut"]->SetBinContent(
 				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
 						/ MicroMegas.driftSteps + 1,
