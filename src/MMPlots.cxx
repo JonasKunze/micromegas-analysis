@@ -246,9 +246,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 *
 	 * Reduce the number of event display to a reasonable number
 	 */
-	if (storeHistogram(event->getCurrentEventNumber())) {
-		generateEventDisplay(event);
-	}
+//	if (storeHistogram(event->getCurrentEventNumber())) {
+//		generateEventDisplay(event);
+//	}
 
 	/*
 	 * 2. Find maximum charge
@@ -533,16 +533,16 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["chargeXfieldStrength"] = new TH2F(
-			"chargeXfieldStrength", ";Drift field strength [V/m] ;VAmp [V]",
-			numberOfXBins, firstXBinValue * 1000 / MicroMegas.driftGap,
-			lastXBinValue / MicroMegas.driftGap,
+			"chargeXfieldStrength", ";Drift field strength [kV/m] ;VAmp [V]",
+			numberOfXBins, firstXBinValue  / MicroMegas.driftGap,
+			lastXBinValue  / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeYfieldStrength"] = new TH2F(
-			"chargeYfieldStrength", ";Drift field strength [V/m] ;VAmp [V]",
-			numberOfXBins, firstXBinValue * 1000 / MicroMegas.driftGap,
-			lastXBinValue / MicroMegas.driftGap,
+			"chargeYfieldStrength", ";Drift field strength [kV/m] ;VAmp [V]",
+			numberOfXBins, firstXBinValue  / MicroMegas.driftGap,
+			lastXBinValue  / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
