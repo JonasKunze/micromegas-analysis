@@ -23,12 +23,12 @@ private:
 	static std::vector<std::pair<int, int> > neighbourStripeLimitsY;
 public:
 	//Voltage range, needed for initialization of combined histograms (hier die Schritte von VD und VA angeben (amp stimmt schon)
-	int driftStart = 50;
-	int driftEnd = 1205;
-	int driftSteps = 50;
-	int ampStart = 500;
-	int ampEnd = 550;
-	int ampSteps = 25;
+	int driftStart;
+	int driftEnd;
+	int driftSteps;
+	int ampStart;
+	int ampEnd;
+	int ampSteps;
 
 
 	static std::vector<double> getAvailableDriftGaps() {
