@@ -296,7 +296,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	event->generateFixedTimeCrossSections();
 
-
 	// Proportion cuts
 	bool acceptEventX = event->runProportionCut(
 			general_mapCombined["mmhitneighboursX"],
@@ -356,6 +355,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	if (gaussFitY == NULL) {
 		cutStatistics.fitProblemCuts->Fill(1);
+		delete fitHistoX;
 		delete fitHistoY;
 		return false;
 	} else {
@@ -369,6 +369,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	if (abs(
 			stripNumShowingSignal[event->stripWithMaxChargeY]
 					- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
+		delete fitHistoX;
 		delete fitHistoY;
 		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(1);
 		return false;
@@ -422,38 +423,35 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	}
 
-	if (/*condition to fill general histograms*/(gaussFitY != NULL
-			&& gaussFitX != NULL)) {
-		// coincidence check between x and y signal (within 25ns)
-		general_mapHist2D["mmhitmap"]->Fill(
-				/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
-				stripNumShowingSignal[event->stripWithMaxChargeY]);
+	// coincidence check between x and y signal (within 25ns)
+	general_mapHist2D["mmhitmap"]->Fill(
+			/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
+			stripNumShowingSignal[event->stripWithMaxChargeY]);
 
-		general_mapCombined1D["chargexAllEvents"]->Fill(event->maxChargeX);
-		general_mapCombined1D["chargeyAllEvents"]->Fill(event->maxChargeY);
+	general_mapCombined1D["chargexAllEvents"]->Fill(event->maxChargeX);
+	general_mapCombined1D["chargeyAllEvents"]->Fill(event->maxChargeY);
 
-		general_mapHist1D["mmchargex"]->Fill(
-		/*maximum charge x*/event->maxChargeX);
-		general_mapHist1D["mmchargey"]->Fill(
-		/*maximum charge y*/event->maxChargeY);
-		general_mapHist1D["mmhitx"]->Fill(
-				/*strip x with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeX]);
-		general_mapHist1D["mmhity"]->Fill(
-				/*strip y with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeY]);
+	general_mapHist1D["mmchargex"]->Fill(
+	/*maximum charge x*/event->maxChargeX);
+	general_mapHist1D["mmchargey"]->Fill(
+	/*maximum charge y*/event->maxChargeY);
+	general_mapHist1D["mmhitx"]->Fill(
+			/*strip x with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeX]);
+	general_mapHist1D["mmhity"]->Fill(
+			/*strip y with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeY]);
 
-		general_mapHist1D["mmclusterx"]->Fill(
-		/*number of x strips hit by one event*/event->numberOfXHits);
-		general_mapHist1D["mmclustery"]->Fill(
-		/*number of y strips hit by one event*/event->numberOfYHits);
+	general_mapHist1D["mmclusterx"]->Fill(
+	/*number of x strips hit by one event*/event->numberOfXHits);
+	general_mapHist1D["mmclustery"]->Fill(
+	/*number of y strips hit by one event*/event->numberOfYHits);
 
-		general_mapHist1D["mmtimex"]->Fill(
-		/*time of maximum charge x*/event->timeSliceOfMaxChargeX * 25);
-		general_mapHist1D["mmtimey"]->Fill(
-		/*time of maximum charge y*/event->timeSliceOfMaxChargeY * 25);
+	general_mapHist1D["mmtimex"]->Fill(
+	/*time of maximum charge x*/event->timeSliceOfMaxChargeX * 25);
+	general_mapHist1D["mmtimey"]->Fill(
+	/*time of maximum charge y*/event->timeSliceOfMaxChargeY * 25);
 
-		eventTimes.push_back(
-				(double) event->time_s + (double) event->time_us / 1e6);
-	}
+	eventTimes.push_back(
+			(double) event->time_s + (double) event->time_us / 1e6);
 	return true;
 }
 
@@ -511,8 +509,9 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 //			numberOfXBins, firstXBinValue, lastXBinValue,
 //			(ampEnd - ampStart) / ampSteps + 1, ampStart - 0.5 * ampSteps,
 //			ampEnd + 0.5 * ampSteps);
-	general_mapCombined["chargeX"] = new TH2F("chargeX", ";VDrift [V] ;VAmp [V]",
-			numberOfXBins, firstXBinValue, lastXBinValue,
+	general_mapCombined["chargeX"] = new TH2F("chargeX",
+			";VDrift [V] ;VAmp [V]", numberOfXBins, firstXBinValue,
+			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
@@ -524,26 +523,28 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 
 	general_mapCombined["chargeXfieldStrength"] = new TH2F(
 			"chargeXfieldStrength", ";Drift field strength [V/m] ;VAmp [V]",
-			numberOfXBins, firstXBinValue*1000 / MicroMegas.driftGap,
+			numberOfXBins, firstXBinValue * 1000 / MicroMegas.driftGap,
 			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeYfieldStrength"] = new TH2F(
 			"chargeYfieldStrength", ";Drift field strength [V/m] ;VAmp [V]",
-			numberOfXBins, firstXBinValue*1000 / MicroMegas.driftGap,
+			numberOfXBins, firstXBinValue * 1000 / MicroMegas.driftGap,
 			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["chargeXuncut"] = new TH2F("chargeXuncut",
-			";VDrift [V] ;VAmp [V]", numberOfXBins, firstXBinValue, lastXBinValue,
+			";VDrift [V] ;VAmp [V]", numberOfXBins, firstXBinValue,
+			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeYuncut"] = new TH2F("chargeYuncut",
-			";VDrift [V] ;VAmp [V]", numberOfXBins, firstXBinValue, lastXBinValue,
+			";VDrift [V] ;VAmp [V]", numberOfXBins, firstXBinValue,
+			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
@@ -583,7 +584,8 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			i < sizeof(cutStatistics.names) / sizeof(std::string); i++) {
 		std::string name = cutStatistics.names[i];
 
-		histoGramms[i] = new TH1F(name.c_str(), ";nein/ja ;entries", 2, -0.5, 1.5);
+		histoGramms[i] = new TH1F(name.c_str(), ";nein/ja ;entries", 2, -0.5,
+				1.5);
 		general_mapCombined1D[name] = histoGramms[i];
 	}
 
@@ -800,7 +802,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		gDirectory->cd("2D_Events");
 		for (map<string, TH2F*>::iterator iter = general_mapHist2DEvent.begin();
 				iter != general_mapHist2DEvent.end(); iter++) {
-			iter->second->SetOption("error");
 			iter->second->Write();
 			delete iter->second;
 		}
