@@ -218,7 +218,7 @@ private:
 			m_mapFile["VD117VA500"] = new TFile(
 					(path + appendName + "_VD117VA500.root").c_str(),
 					(Option_t*) "RECREATE");
-			m_mapFile["VD291VA500"] = new TFile(
+			m_mapFile["VD292VA500"] = new TFile(
 					(path + appendName + "_VD291VA500.root").c_str(),
 					(Option_t*) "RECREATE");
 			m_mapFile["VD467VA500"] = new TFile(

@@ -27,6 +27,7 @@ struct sort_pair_first {
 };
 
 struct cutStatistics_t {
+	TH1F* emptyEventCuts;
 	TH1F* timingCuts;
 	TH1F* chargeCuts;
 	TH1F* timeCoincidenceCuts;
@@ -35,9 +36,11 @@ struct cutStatistics_t {
 	TH1F* proportionYCuts;
 	TH1F* fitMeanMaxChargeDistanceCuts;
 	TH1F* fitProblemCuts;
-	std::string names[8] = { "timingCuts", "chargeCuts", "timeCoincidenceCuts",
-			"absolutePositionCuts", "proportionXCuts", "proportionYCuts",
-			"fitMeanMaxChargeDistanceCuts", "fitProblemCuts" };
+	std::string names[9] =
+			{ "emptyEventCuts", "timingCuts", "chargeCuts",
+					"timeCoincidenceCuts", "absolutePositionCuts",
+					"proportionXCuts", "proportionYCuts",
+					"fitMeanMaxChargeDistanceCuts", "fitProblemCuts" };
 };
 
 class MMQuickEvent {
@@ -90,16 +93,6 @@ public:
 		}
 		m_tchain->GetEvent(m_actEventNumber);
 		m_actEventNumber++;
-
-		maxChargeX = 0;
-		stripWithMaxChargeX = 0;
-		timeSliceOfMaxChargeX = 0;
-		maxChargeY = 0;
-		stripWithMaxChargeY = 0;
-		timeSliceOfMaxChargeY = 0;
-
-		numberOfXHits = 0;
-		numberOfYHits = 0;
 
 		return true;
 	}
@@ -226,6 +219,10 @@ public:
 			short maxCharge, std::vector<std::pair<int, int> > proportionLimits,
 			cutStatistics_t& cutStat, TH1F* proportionCuts) {
 
+		if (stripAndChargeAtMaxChargeTime.size() == 0) {
+			return false;
+		}
+
 		// Sort cross section by absolute strip numbers (first entry in pairs)
 		std::sort(stripAndChargeAtMaxChargeTime.begin(),
 				stripAndChargeAtMaxChargeTime.end(),
@@ -330,12 +327,22 @@ public:
 		vector<short> maxChargeOfStrip = *apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time slices
 		vector<short> timeSliceOfMaxChargeOfStrip = *apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time slice of the corresponding maximum charge (see above)
 
+		maxChargeX = -1;
+		stripWithMaxChargeX = -1;
+		timeSliceOfMaxChargeX = -1;
+		maxChargeY = -1;
+		stripWithMaxChargeY = -1;
+		timeSliceOfMaxChargeY = -1;
+
+		numberOfXHits = -1;
+		numberOfYHits = -1;
+
 		/*
 		 * Iterate through all strips and check if it is X or Y data. Compare the maximum charge
 		 * of the strip with the maximum charge found so far for the current axis. Store current charge, strip number
 		 * and time slice with the maximum charge if the current charge is larger than before.
 		 */
-		for (unsigned int strip = 1; strip != maxChargeOfStrip.size();
+		for (unsigned int strip = 0; strip != maxChargeOfStrip.size();
 				strip++) {
 			unsigned int apvID = apvIDofStrip[strip];
 			if (isX(apvID)) { // X axis
