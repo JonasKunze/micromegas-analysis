@@ -313,7 +313,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			general_mapCombined["mmhitneighboursX"],
 			event->stripAndChargeAtMaxChargeTimeX, event->maxChargeX,
 			MapFile::getProportionLimitsOfMaxHitNeighboursX(),
-			cutStatistics.absolutePositionCutsY, cutStatistics.proportionXCuts,
+			cutStatistics.absolutePositionCutsX, cutStatistics.proportionXCuts,
 			false);
 
 	bool acceptEventY = event->runProportionCut(
