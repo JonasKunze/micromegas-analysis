@@ -2,6 +2,7 @@
 #define MMQuickEvent_H
 
 #include "CCommonIncludes.h"
+#include "CutStatistic.h"
 #include "MapFile.h"
 
 using namespace std;
@@ -35,6 +36,7 @@ public:
 			m_tchain->Add(vecFilenames[i].c_str());
 			m_tchain->AddFriend("data", vecFilenames[i].c_str());
 		}
+
 		cleanVariables();
 		addBranches();
 		m_actEventNumber = 0;
@@ -200,8 +202,8 @@ public:
 	bool runProportionCut(TH2F* maxNeighbourHisto,
 			vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTime,
 			short maxCharge, std::vector<std::pair<int, int> > proportionLimits,
-			TH1F* absolutePositionCuts, TH1F* proportionCuts,
-			bool lastProportionCut) {
+			CutStatistic& absolutePositionCuts,
+			CutStatistic& proportionCuts, bool lastProportionCut) {
 
 		if (stripAndChargeAtMaxChargeTime.size() == 0) {
 			return false;
@@ -290,14 +292,14 @@ public:
 
 		if (!lastProportionCut) {
 			if (absolutePositionCut) {
-				absolutePositionCuts->Fill(1);
+				absolutePositionCuts.Fill(1, this);
 			} else {
-				absolutePositionCuts->Fill(0);
+				absolutePositionCuts.Fill(0, this);
 
 				if (proportionCut) {
-					proportionCuts->Fill(1);
+					proportionCuts.Fill(1, this);
 				} else {
-					proportionCuts->Fill(0);
+					proportionCuts.Fill(0, this);
 				}
 			}
 		}
@@ -344,6 +346,64 @@ public:
 					maxChargeY = maxChargeOfStrip[strip];
 					stripWithMaxChargeY = strip;
 					timeSliceOfMaxChargeY = timeSliceOfMaxChargeOfStrip[strip];
+				}
+			}
+		}
+	}
+
+	/**
+	 * Generates a new 2D histogram (heatmap) showing all measured charges in all strips of x or y direction of all times slices.
+	 * The histogram will be stored at general_mapHist2DEvent[eventNumber+"nameOfHistogram"]
+	 */
+	void generateEventDisplay(TH2F* &eventDisplayX, TH2F* &eventDisplayY, std::string suffix="") {
+		vector<vector<short> > chargeOfTimeOfStrip = *apv_q;
+		unsigned int numberOfTimeSlices = chargeOfTimeOfStrip[0].size();
+
+		/*
+		 * Generate a new 2D histogram for the event display (x=strip, y=timeslice, z=charge)
+		 */
+
+		// Generate the title of the histogram
+		stringstream histoName;
+		histoName.str("");
+		histoName << getCurrentEventNumber() << "-Eventdisplay";
+
+		string histoNameX = histoName.str() + "_X" + suffix;
+		string histoNameY = histoName.str() + "_Y" + suffix;
+
+		/*
+		 * Initialize a new root TH2F histogram with the right title, labels and binning:
+		 *
+		 */
+		eventDisplayX = new TH2F(histoNameX.c_str(),
+				";Strip Number; Time [25 ns]", xStrips, 0, xStrips - 1,
+				numberOfTimeSlices, 0, numberOfTimeSlices - 1);
+
+		eventDisplayY = new TH2F(histoNameY.c_str(),
+				";Strip Number; Time [25 ns]", yStrips, 0, yStrips - 1,
+				numberOfTimeSlices, 0, numberOfTimeSlices - 1);
+
+		/*
+		 * Fill eventDisplay with all measured charges at all strips for all times;
+		 * for all timeSlices, we iterate through all Strips (X and Y). Depending
+		 * on the apvID, the corresponding histogram is filled (X resp. Y).
+		 */
+		for (unsigned int timeSlice = 0; timeSlice != numberOfTimeSlices;
+				timeSlice++) {
+			for (unsigned int stripNum = 0;
+					stripNum != chargeOfTimeOfStrip.size(); stripNum++) {
+				short charge = chargeOfTimeOfStrip[stripNum][timeSlice];
+				unsigned int apvID = (*apv_id)[stripNum];
+				if (MMQuickEvent::isX(apvID)) {
+
+					// store charge of current strip in bin corresponding to absolute strip number
+					eventDisplayX->SetBinContent(
+							mm_strip->at(stripNum) + 1/*x*/, timeSlice + 1/*y*/,
+							charge/*z*/);
+				} else {
+					eventDisplayY->SetBinContent(
+							mm_strip->at(stripNum) + 1/*x*/, timeSlice + 1/*y*/,
+							charge/*z*/);
 				}
 			}
 		}

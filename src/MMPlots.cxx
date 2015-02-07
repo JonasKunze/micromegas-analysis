@@ -10,7 +10,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
@@ -73,26 +73,18 @@ struct maxi_t {
 	Int_t number;
 };
 
-struct cutStatistics_t {
-	TH1F* timingCuts;
-	TH1F* chargeCuts;
-	TH1F* timeCoincidenceCuts;
-	TH1F* absolutePositionCutsX;
-	TH1F* absolutePositionCutsY;
-	TH1F* proportionXCuts;
-	TH1F* proportionYCuts;
-	TH1F* fitMeanMaxChargeDistanceCuts;
-	TH1F* fitProblemCuts;
-	std::string names[9] =
-			{ "timingCuts", "chargeCuts", "timeCoincidenceCuts",
-					"absolutePositionCutsX", "absolutePositionCutsY",
-					"proportionXCuts", "proportionYCuts",
-					"fitMeanMaxChargeDistanceCuts", "fitProblemCuts" };
-};
-
 gauss_t gauss;
 maxi_t maxi;
-cutStatistics_t cutStatistics;
+
+CutStatistic chargeCuts("achargeCuts");
+CutStatistic timingCuts("btimingCuts");
+CutStatistic timeCoincidenceCuts("ctimeCoincidenceCuts");
+CutStatistic absolutePositionXCuts("dabsolutePositionXCuts");
+CutStatistic proportionXCuts("fproportionXCuts");
+CutStatistic absolutePositionYCuts("eabsolutePositionYCuts");
+CutStatistic proportionYCuts("gproportionYCuts");
+CutStatistic fitProblemCuts("hfitProblemCuts");
+CutStatistic fitMeanMaxChargeDistanceCuts("ifitMeanMaxChargeDistanceCuts");
 
 //set output path and name of output files
 const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
@@ -128,70 +120,6 @@ void fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		VAsForGraphs.push_back(VA);
 		hitWidthForGraphs.push_back(widthHistFitResult->GetParameter(1));
 		hitWidthForVDError.push_back(widthHistFitResult->GetParError(1));
-	}
-}
-
-/**
- * Generates a new 2D histogram (heatmap) showing all measured charges in all strips of x or y direction of all times slices.
- * The histogram will be stored at general_mapHist2DEvent[eventNumber+"nameOfHistogram"]
- */
-void generateEventDisplay(MMQuickEvent* event) {
-	vector<vector<short> > chargeOfTimeOfStrip = *event->apv_q;
-	unsigned int numberOfTimeSlices = chargeOfTimeOfStrip[0].size();
-
-	/*
-	 * Generate a new 2D histogram for the event display (x=strip, y=timeslice, z=charge)
-	 */
-
-	// Generate the title of the histogram
-	stringstream histoName;
-	histoName.str("");
-	histoName << event->getCurrentEventNumber() << "-Eventdisplay";
-
-	string histoNameX = histoName.str() + "_X";
-	string histoNameY = histoName.str() + "_Y";
-
-	/*
-	 * Initialize a new root TH2F histogram with the right title, labels and binning:
-	 *
-	 */
-	TH2F* eventDisplayX = new TH2F(histoNameX.c_str(),
-			";Strip Number; Time [25 ns]", xStrips, 0, xStrips - 1,
-			numberOfTimeSlices, 0, numberOfTimeSlices - 1);
-
-	TH2F* eventDisplayY = new TH2F(histoNameY.c_str(),
-			";Strip Number; Time [25 ns]", yStrips, 0, yStrips - 1,
-			numberOfTimeSlices, 0, numberOfTimeSlices - 1);
-
-	// Store the new histogram in the global map
-	eventDisplayX->GetName();
-	eventDisplayY->GetName();
-	general_mapHist2DEvent[histoNameX] = eventDisplayX;
-	general_mapHist2DEvent[histoNameY] = eventDisplayY;
-
-	/*
-	 * Fill eventDisplay with all measured charges at all strips for all times;
-	 * for all timeSlices, we iterate through all Strips (X and Y). Depending
-	 * on the apvID, the corresponding histogram is filled (X resp. Y).
-	 */
-	for (unsigned int timeSlice = 0; timeSlice != numberOfTimeSlices;
-			timeSlice++) {
-		for (unsigned int stripNum = 0; stripNum != chargeOfTimeOfStrip.size();
-				stripNum++) {
-			short charge = chargeOfTimeOfStrip[stripNum][timeSlice];
-			unsigned int apvID = (*event->apv_id)[stripNum];
-			if (MMQuickEvent::isX(apvID)) {
-
-				// store charge of current strip in bin corresponding to absolute strip number
-				eventDisplayX->SetBinContent(
-						event->mm_strip->at(stripNum) + 1/*x*/,
-						timeSlice + 1/*y*/, charge/*z*/);
-			} else {
-				eventDisplayY->SetBinContent(
-						event->mm_strip->at(stripNum) + 1/*x*/,
-						timeSlice + 1/*y*/, charge/*z*/);
-			}
-		}
 	}
 }
 
@@ -250,9 +178,16 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 *
 	 * Reduce the number of event display to a reasonable number
 	 */
-//	if (storeHistogram(event->getCurrentEventNumber())) {
-//		generateEventDisplay(event);
-//	}
+	if (storeHistogram(event->getCurrentEventNumber())) {
+		TH2F *eventDisplayX, *eventDisplayY;
+		event->generateEventDisplay(eventDisplayX, eventDisplayY);
+
+		// Store the new histogramy in the global map
+		general_mapHist2DEvent[eventDisplayX->GetName()] = eventDisplayX;
+		general_mapHist2DEvent[eventDisplayY->GetName()] = eventDisplayY;
+
+	}
+
 	/*
 	 * 2. Find maximum charge
 	 */
@@ -272,10 +207,10 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	// Charge cut
 	if (event->maxChargeX < MIN_CHARGE_X || event->maxChargeY < MIN_CHARGE_Y) {
-		cutStatistics.chargeCuts->Fill(1);
+		chargeCuts.Fill(1, event);
 		return false;
 	} else {
-		cutStatistics.chargeCuts->Fill(0);
+		chargeCuts.Fill(0, event);
 	}
 
 	// Timing cut
@@ -283,10 +218,10 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE
 			|| event->timeSliceOfMaxChargeY < MIN_TIMESLICE
 			|| event->timeSliceOfMaxChargeY > MAX_TIMESLICE) {
-		cutStatistics.timingCuts->Fill(1);
+		timingCuts.Fill(1, event);
 		return false;
 	} else {
-		cutStatistics.timingCuts->Fill(0);
+		timingCuts.Fill(0, event);
 	}
 
 	general_mapCombined1D["timeDistribution"]->Fill(
@@ -296,10 +231,10 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	if (abs(
 			event->timeSliceOfMaxChargeX
 					- event->timeSliceOfMaxChargeY) > MAX_XY_TIME_DIFFERENCE) {
-		cutStatistics.timeCoincidenceCuts->Fill(1);
+		timeCoincidenceCuts.Fill(1, event);
 		return false;
 	} else {
-		cutStatistics.timeCoincidenceCuts->Fill(0);
+		timeCoincidenceCuts.Fill(0, event);
 	}
 
 	/*
@@ -313,15 +248,13 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			general_mapCombined["mmhitneighboursX"],
 			event->stripAndChargeAtMaxChargeTimeX, event->maxChargeX,
 			MapFile::getProportionLimitsOfMaxHitNeighboursX(),
-			cutStatistics.absolutePositionCutsX, cutStatistics.proportionXCuts,
-			false);
+			absolutePositionXCuts, proportionXCuts, false);
 
 	bool acceptEventY = event->runProportionCut(
 			general_mapCombined["mmhitneighboursY"],
 			event->stripAndChargeAtMaxChargeTimeY, event->maxChargeY,
 			MapFile::getProportionLimitsOfMaxHitNeighboursY(),
-			cutStatistics.absolutePositionCutsY, cutStatistics.proportionYCuts,
-			acceptEventX);
+			absolutePositionYCuts, proportionYCuts, !acceptEventX);
 
 	if (!acceptEventX || !acceptEventY) {
 		return false;
@@ -344,7 +277,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	// fit problem cut
 	if (gaussFitX == NULL) {
-		cutStatistics.fitProblemCuts->Fill(1);
+		fitProblemCuts.Fill(1, event);
 		delete fitHistoX;
 		return false;
 	}
@@ -357,11 +290,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			stripNumShowingSignal[event->stripWithMaxChargeX]
 					- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 		delete fitHistoX;
-		cutStatistics.fitProblemCuts->Fill(0);
-		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(1);
+		fitProblemCuts.Fill(0, event);
+		fitMeanMaxChargeDistanceCuts.Fill(1, event);
 		return false;
-	} else {
-		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(0);
 	}
 
 	gaussFitY = fitGauss(event->stripAndChargeAtMaxChargeTimeY, eventNumber,
@@ -370,12 +301,12 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			stripNumShowingSignal[event->stripWithMaxChargeY] + FIT_RANGE / 2);
 
 	if (gaussFitY == NULL) {
-		cutStatistics.fitProblemCuts->Fill(1);
+		fitProblemCuts.Fill(1, event);
 		delete fitHistoX;
 		delete fitHistoY;
 		return false;
 	} else {
-		cutStatistics.fitProblemCuts->Fill(0);
+		fitProblemCuts.Fill(0, event);
 	}
 
 	/*
@@ -387,10 +318,10 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 					- mean) > MAX_FIT_MEAN_DISTANCE_TO_MAX) {
 		delete fitHistoX;
 		delete fitHistoY;
-		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(1);
+		fitMeanMaxChargeDistanceCuts.Fill(1, event);
 		return false;
 	} else {
-		cutStatistics.fitMeanMaxChargeDistanceCuts->Fill(0);
+		fitMeanMaxChargeDistanceCuts.Fill(0, event);
 	}
 
 //storage after procession
@@ -484,7 +415,7 @@ void plotGraph(std::string name, std::string xTitle,
 	std::vector<double> xValuesFiltered;
 	std::vector<double> yValuesFiltered;
 	std::vector<double> yValueErrorsFiltered;
-	for (int i = 0; i < xValues.size(); i++) {
+	for (unsigned int i = 0; i < xValues.size(); i++) {
 		if (parameters[i] == parameterValue) {
 			xValuesFiltered.push_back(xValues[i]);
 			yValuesFiltered.push_back(hitWidths[i]);
@@ -509,7 +440,6 @@ void plotGraph(std::string name, std::string xTitle,
 
 	hitWidthVsV.Fit("pol1", "q");
 	hitWidthVsV.Write(hitWidthVsV.GetTitle());
-
 
 	std::stringstream pdfName;
 	pdfName << outPath << driftGap << "/" << hitWidthVsV.GetName() << ".pdf";
@@ -631,19 +561,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			";time section ;entries", 27, -0.5, 26.5);
 	general_mapCombined1D["timeDistributionUncut"] = new TH1F(
 			"timeDistributionUncut", ";time section ;entries", 27, -0.5, 26.5);
-
-	/*
-	 * Generate cut histograms
-	 */
-	TH1F** histoGramms = (TH1F**) &cutStatistics;
-	for (unsigned int i = 0;
-			i < sizeof(cutStatistics.names) / sizeof(std::string); i++) {
-		std::string name = cutStatistics.names[i];
-
-		histoGramms[i] = new TH1F(name.c_str(), ";nein/ja ;entries", 2, -0.5,
-				1.5);
-		general_mapCombined1D[name] = histoGramms[i];
-	}
 
 	int numberOfRunsToProcess = mapFile.size();
 	if (MAX_NUM_OF_RUNS_TO_BE_PROCESSED < numberOfRunsToProcess
@@ -903,12 +820,11 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	std::cout << "############################################################"
 			<< std::endl;
 	std::cout << "Name\taccepted\tcut\t%cut" << std::endl;
-	for (unsigned int i = 0;
-			i < sizeof(cutStatistics.names) / sizeof(std::string); i++) {
-		TH1F* histo = general_mapCombined1D[cutStatistics.names[i]];
-		double accepted = histo->GetBinContent(1);
-		double cut = histo->GetBinContent(2);
-		std::cout << cutStatistics.names[i] << "\t" << accepted << "\t" << cut
+	for (auto& cutStat : CutStatistic::instances) {
+		TH1F histo = cutStat->counterHistogram;
+		double accepted = histo.GetBinContent(1);
+		double cut = histo.GetBinContent(2);
+		std::cout << cutStat->getName() << "\t" << accepted << "\t" << cut
 				<< "\t" << cut / (accepted + cut) << std::endl;
 	}
 
@@ -921,37 +837,61 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		delete iter->second;
 	}
 
-	gDirectory->mkdir("Cuts");
+	fileCombined->cd();
+	fileCombined->mkdir("Cuts");
+	fileCombined->cd("Cuts");
+	for (auto& cutStat : CutStatistic::instances) {
+		fileCombined->cd("Cuts");
+		cutStat->counterHistogram.Write();
 
+		std::stringstream eventDisplayDirName;
+		eventDisplayDirName << cutStat->getName() << "events";
+		gDirectory->mkdir(eventDisplayDirName.str().c_str());
+		gDirectory->cd(eventDisplayDirName.str().c_str());
+		{
+			gDirectory->mkdir("Cut");
+			gDirectory->cd("Cut");
+			for (auto& display : cutStat->eventDisplaysCut) {
+				display->Write();
+				delete display;
+			}
+			cutStat->eventDisplaysCut.clear();
+			gDirectory->cd("..");
+		}
+		{
+			gDirectory->mkdir("Accepted");
+			gDirectory->cd("Accepted");
+			for (auto& display : cutStat->eventDisplaysAccepted) {
+				display->Write();
+				delete display;
+			}
+			cutStat->eventDisplaysAccepted.clear();
+			gDirectory->cd("..");
+		}
+		gDirectory->cd("..");
+	}
+	fileCombined->cd("..");
+
+	/*
+	 * Write any TH1F to the file and to pdf
+	 */
 	for (map<string, TH1F*>::iterator iter = general_mapCombined1D.begin();
 			iter != general_mapCombined1D.end(); iter++) {
-
-		fileCombined->cd();
-		std::string ending = "Cuts";
-		std::string name = iter->first;
-		bool isCutHisto = false;
-
-		if (std::equal(ending.rbegin(), ending.rend(), name.rbegin())) {
-			isCutHisto = true;
-			gDirectory->cd("Cuts");
-		}
-
 		iter->second->Write();
 
-		if (isCutHisto) {
-			gDirectory->cd("..");
-		} else {
-			/*
-			 * write PDF
-			 */
-			writeHistoToPDF(iter->second, MicroMegas.driftGap);
-		}
+		/*
+		 * write PDF
+		 */
+		writeHistoToPDF(iter->second, MicroMegas.driftGap);
 		delete iter->second;
 	}
 
 	/*
 	 * Fit and write the graphs
 	 */
+
+	fileCombined->mkdir("Graphs");
+	fileCombined->cd("Graphs");
 	std::set<int> allVAs, allVDs; // TreeSet to make every entry stored only once
 	allVAs.insert(VAsForGraphsX.begin(), VAsForGraphsX.end());
 	allVDs.insert(VDsForGraphsX.begin(), VDsForGraphsX.end());
