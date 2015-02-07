@@ -36,7 +36,6 @@ MMQuickEvent *m_event;
 map<string, TTree*> general_mapTree; 		//TTress
 map<string, TH1F*> general_mapHist1D; 	//1D histogram of analysis for each run
 map<string, TH2F*> general_mapHist2D;	//2D histogram of analysis for each run
-map<string, TH2F*> general_mapHist2DEvent; 	//plot of 2D EventDisplay
 map<string, TH1F*> general_mapPlotFit;		//plot of fits
 map<string, TH2F*> general_mapCombined;		//combined Plots
 map<string, TH1F*> general_mapCombined1D;
@@ -172,21 +171,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	vector<vector<short> > chargeOfStripOfTime = *event->apv_q; // chargeOfStripOfTime[i][j] is the charge of strip i in time slice j (matrix of whole event)
 	vector<short> maxChargeOfStrip = *event->apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time slices
 	vector<short> timeSliceOfMaxChargeOfStrip = *event->apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time slice of the corresponding maximum charge (see above)
-
-	/*
-	 * 1. Create event display
-	 *
-	 * Reduce the number of event display to a reasonable number
-	 */
-	if (storeHistogram(event->getCurrentEventNumber())) {
-		TH2F *eventDisplayX, *eventDisplayY;
-		event->generateEventDisplay(eventDisplayX, eventDisplayY);
-
-		// Store the new histogramy in the global map
-		general_mapHist2DEvent[eventDisplayX->GetName()] = eventDisplayX;
-		general_mapHist2DEvent[eventDisplayY->GetName()] = eventDisplayY;
-
-	}
 
 	/*
 	 * 2. Find maximum charge
@@ -757,14 +741,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		file0->cd();
 
 		/// loop over map of the plots for saving
-		gDirectory->mkdir("2D_Events");
-		gDirectory->cd("2D_Events");
-		for (map<string, TH2F*>::iterator iter = general_mapHist2DEvent.begin();
-				iter != general_mapHist2DEvent.end(); iter++) {
-			iter->second->GetName();
-			iter->second->Write();
-			delete iter->second;
-		}
 		for (map<string, TH1F*>::iterator iter = general_mapHist1D.begin();
 				iter != general_mapHist1D.end(); iter++) {
 			iter->second->SetOption("error");
