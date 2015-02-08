@@ -10,15 +10,21 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 5
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
  * Cuts
  */
 // Minimal charge required for the strip with maximum charge
-#define MIN_CHARGE_X 55
-#define MIN_CHARGE_Y 120
+#define MIN_CHARGE_X 10
+#define MIN_CHARGE_Y 30
+
+#define MIN_CLUSTER_X 2
+#define MAX_CLUSTER_X 8
+#define MIN_CLUSTER_Y 2
+#define MAX_CLUSTER_Y 25
+
 //#define MIN_CHARGE_X 0
 //#define MIN_CHARGE_Y 0
 
@@ -76,7 +82,8 @@ gauss_t gauss;
 maxi_t maxi;
 
 CutStatistic chargeCuts("achargeCuts");
-CutStatistic timingCuts("btimingCuts");
+CutStatistic timingCuts("batimingCuts");
+CutStatistic clusterCuts("bbclusterCuts");
 CutStatistic timeCoincidenceCuts("ctimeCoincidenceCuts");
 CutStatistic absolutePositionXCuts("dabsolutePositionXCuts");
 CutStatistic proportionXCuts("fproportionXCuts");
@@ -90,7 +97,7 @@ const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
 const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
 //const string outPath = "/tmp/output/"; // Path of the Output
 const string appendName = "";					// Name of single measurements
-const string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war. Es können unter anderem angeschaut werden Raten in abhängigkeit der Spannung
+const string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war.
 
 /**
  * Returns true for every Nth eventNumber so that about 100-200 times true is returned for any number of events
@@ -183,9 +190,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	general_mapCombined1D["chargexAllEventsUncut"]->Fill(event->maxChargeX);
 	general_mapCombined1D["chargeyAllEventsUncut"]->Fill(event->maxChargeY);
 
-	general_mapHist1D["mmclusterxUncut"]->Fill(event->numberOfXHits);
-	general_mapHist1D["mmclusteryUncut"]->Fill(event->numberOfYHits);
-
 	general_mapCombined1D["timeDistributionUncut"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
@@ -208,8 +212,35 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		timingCuts.Fill(0, event);
 	}
 
-	general_mapCombined1D["timeDistribution"]->Fill(
-			event->timeSliceOfMaxChargeY);
+	/*
+	 * Calculate cluster sizes
+	 */
+	event->generateFixedTimeCrossSections();
+
+	int clusterSizeX = event->calculateClusterSize(
+			event->stripAndChargeAtMaxChargeTimeX,
+			event->positionOfMaxChargeInCrossSectionX);
+
+	int clusterSizeY = event->calculateClusterSize(
+			event->stripAndChargeAtMaxChargeTimeY,
+			event->positionOfMaxChargeInCrossSectionY);
+
+	general_mapHist1D["mmclusterxUncut"]->Fill(clusterSizeX);
+	general_mapHist1D["mmclusteryUncut"]->Fill(clusterSizeY);
+
+	general_mapCombined1D["clusterxUncut"]->Fill(clusterSizeX);
+	general_mapCombined1D["clusteryUncut"]->Fill(clusterSizeY);
+
+	// Cluster cut
+	if (clusterSizeX < MIN_CLUSTER_X || clusterSizeY < MIN_CLUSTER_Y
+			|| clusterSizeX > MAX_CLUSTER_X || clusterSizeY > MAX_CLUSTER_Y) {
+		std::stringstream suffix;
+		suffix << clusterSizeX << "-" << clusterSizeY;
+		clusterCuts.Fill(1, event, suffix.str());
+		return false;
+	} else {
+		clusterCuts.Fill(0, event);
+	}
 
 	// coincidence check
 	if (abs(
@@ -225,20 +256,20 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 * 4. Gaussian fits to charge distribution over strips at timestep with maximum charge
 	 */
 
-	event->generateFixedTimeCrossSections();
-
 	// Proportion cuts
 	bool acceptEventX = event->runProportionCut(
 			general_mapCombined["mmhitneighboursX"],
 			event->stripAndChargeAtMaxChargeTimeX, event->maxChargeX,
 			MapFile::getProportionLimitsOfMaxHitNeighboursX(),
-			absolutePositionXCuts, proportionXCuts, false);
+			absolutePositionXCuts, proportionXCuts, false,
+			event->positionOfMaxChargeInCrossSectionX);
 
 	bool acceptEventY = event->runProportionCut(
 			general_mapCombined["mmhitneighboursY"],
 			event->stripAndChargeAtMaxChargeTimeY, event->maxChargeY,
 			MapFile::getProportionLimitsOfMaxHitNeighboursY(),
-			absolutePositionYCuts, proportionYCuts, !acceptEventX);
+			absolutePositionYCuts, proportionYCuts, !acceptEventX,
+			event->positionOfMaxChargeInCrossSectionY);
 
 	if (!acceptEventX || !acceptEventY) {
 		return false;
@@ -351,7 +382,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		delete fitHistoX;
 	}
 
-	// coincidence check between x and y signal (within 25ns)
+	general_mapCombined1D["timeDistribution"]->Fill(
+			event->timeSliceOfMaxChargeY);
+
 	general_mapHist2D["mmhitmap"]->Fill(
 			/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
 			stripNumShowingSignal[event->stripWithMaxChargeY]);
@@ -368,10 +401,11 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	general_mapHist1D["mmhity"]->Fill(
 			/*strip y with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeY]);
 
-	general_mapHist1D["mmclusterx"]->Fill(
-	/*number of x strips hit by one event*/event->numberOfXHits);
-	general_mapHist1D["mmclustery"]->Fill(
-	/*number of y strips hit by one event*/event->numberOfYHits);
+	general_mapHist1D["mmclusterx"]->Fill(clusterSizeX);
+	general_mapHist1D["mmclustery"]->Fill(clusterSizeY);
+
+	general_mapCombined1D["clusterx"]->Fill(clusterSizeX);
+	general_mapCombined1D["clustery"]->Fill(clusterSizeY);
 
 	general_mapHist1D["mmtimex"]->Fill(
 	/*time of maximum charge x*/event->timeSliceOfMaxChargeX * 25);
@@ -388,7 +422,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
  *
  * (xValues[i]+-1, hitWidths[i]+-hitWidthErros[i]) will be plotted for all i with parameters[i]==parameterValue
  */
-void plotGraph(std::string name, std::string xTitle,
+void plotHitWidthGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, std::vector<double> hitWidths,
 		std::vector<double> hitWidthErrors, std::vector<double> parameters,
 		double parameterValue, double driftGap) {
@@ -543,6 +577,15 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			";time section ;entries", 27, -0.5, 26.5);
 	general_mapCombined1D["timeDistributionUncut"] = new TH1F(
 			"timeDistributionUncut", ";time section ;entries", 27, -0.5, 26.5);
+
+	general_mapCombined1D["clusterx"] = new TH1F("clusterx",
+			";x cluster size [strips]; entries", 50, 0, 50.);
+	general_mapCombined1D["clustery"] = new TH1F("clustery",
+			";y cluster size [strips]; entries", 50, 0, 50.);
+	general_mapCombined1D["clusterxUncut"] = new TH1F("clusterxUncut",
+			";x cluster size [strips]; entries", 50, 0, 50.);
+	general_mapCombined1D["clusteryUncut"] = new TH1F("clusteryUncut",
+			";y cluster size [strips]; entries", 50, 0, 50.);
 
 	int numberOfRunsToProcess = mapFile.size();
 	if (MAX_NUM_OF_RUNS_TO_BE_PROCESSED < numberOfRunsToProcess
@@ -876,22 +919,22 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	for (int VA : allVAs) {
 		std::stringstream name;
 		name << "hitWidthVsVDX-VA" << VA;
-		plotGraph(name.str(), "VD [V]", VDsForGraphsX, hitWidthsX,
+		plotHitWidthGraph(name.str(), "VD [V]", VDsForGraphsX, hitWidthsX,
 				hitWidthsXErrors, VAsForGraphsX, VA, MicroMegas.driftGap);
 		name.str("");
 		name << "hitWidthVsVDY-VA" << VA;
-		plotGraph(name.str(), "VD [V]", VDsForGraphsY, hitWidthsY,
+		plotHitWidthGraph(name.str(), "VD [V]", VDsForGraphsY, hitWidthsY,
 				hitWidthsYErrors, VAsForGraphsY, VA, MicroMegas.driftGap);
 	}
 
 	for (int VD : allVDs) {
 		std::stringstream name;
 		name << "hitWidthVsVAX-VD" << VD;
-		plotGraph(name.str(), "VA [V]", VAsForGraphsX, hitWidthsX,
+		plotHitWidthGraph(name.str(), "VA [V]", VAsForGraphsX, hitWidthsX,
 				hitWidthsXErrors, VDsForGraphsX, VD, MicroMegas.driftGap);
 		name.str("");
 		name << "hitWidthVsVAY-VD" << VD;
-		plotGraph(name.str(), "VA [V]", VAsForGraphsY, hitWidthsY,
+		plotHitWidthGraph(name.str(), "VA [V]", VAsForGraphsY, hitWidthsY,
 				hitWidthsYErrors, VDsForGraphsY, VD, MicroMegas.driftGap);
 	}
 

@@ -172,6 +172,9 @@ public:
 	vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimeX; // absolute strip number and charges of all strips at fixed time slice (being the maximum charge time)
 	vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimeY;
 
+	unsigned int positionOfMaxChargeInCrossSectionX;
+	unsigned int positionOfMaxChargeInCrossSectionY;
+
 	/**
 	 * Returns true if the neighbour strips of the strip with maximum charge are within a given range
 	 */
@@ -197,35 +200,48 @@ public:
 								(*apv_q)[strip][timeSliceOfMaxChargeY]/*Charge*/));
 			}
 		}
+
+		// Sort cross section by absolute strip numbers (first entry in pairs)
+		std::sort(stripAndChargeAtMaxChargeTimeX.begin(),
+				stripAndChargeAtMaxChargeTimeX.end(),
+				sort_pair_first<unsigned int, short>());
+
+		std::sort(stripAndChargeAtMaxChargeTimeY.begin(),
+				stripAndChargeAtMaxChargeTimeY.end(),
+				sort_pair_first<unsigned int, short>());
+
+		/*
+		 * Now the array is sorted, the position of the maximal charge strip is unknown -> search for it again
+		 */
+		for (positionOfMaxChargeInCrossSectionX = 0;
+				positionOfMaxChargeInCrossSectionX
+						< stripAndChargeAtMaxChargeTimeX.size();
+				positionOfMaxChargeInCrossSectionX++) {
+			if (stripAndChargeAtMaxChargeTimeX[positionOfMaxChargeInCrossSectionX].second
+					== maxChargeX) {
+				break;
+			}
+		}
+
+		for (positionOfMaxChargeInCrossSectionY = 0;
+				positionOfMaxChargeInCrossSectionY
+						< stripAndChargeAtMaxChargeTimeY.size();
+				positionOfMaxChargeInCrossSectionY++) {
+			if (stripAndChargeAtMaxChargeTimeY[positionOfMaxChargeInCrossSectionY].second
+					== maxChargeY) {
+				break;
+			}
+		}
 	}
 
 	bool runProportionCut(TH2F* maxNeighbourHisto,
 			vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTime,
 			short maxCharge, std::vector<std::pair<int, int> > proportionLimits,
 			CutStatistic& absolutePositionCuts, CutStatistic& proportionCuts,
-			bool lastProportionCut) {
+			bool lastProportionCut, unsigned int positionOfMaxCharge) {
 
 		if (stripAndChargeAtMaxChargeTime.size() == 0) {
 			return false;
-		}
-
-		// Sort cross section by absolute strip numbers (first entry in pairs)
-		std::sort(stripAndChargeAtMaxChargeTime.begin(),
-				stripAndChargeAtMaxChargeTime.end(),
-				sort_pair_first<unsigned int, short>());
-
-		/*
-		 * Now the array is sorted, the position of the maximal charge strip is unknown -> search for it again
-		 */
-		unsigned int positionOfMaxCharge;
-
-		for (positionOfMaxCharge = 0;
-				positionOfMaxCharge < stripAndChargeAtMaxChargeTime.size();
-				positionOfMaxCharge++) {
-			if (stripAndChargeAtMaxChargeTime[positionOfMaxCharge].second
-					== maxCharge) {
-				break;
-			}
 		}
 
 		/*
@@ -253,8 +269,8 @@ public:
 					stripAndChargeAtMaxChargeTime[positionOfMaxCharge].first
 							+ deltaStrip > xStrips; // absolute strip too far to the left
 
-			bool lowerLimitIsLargerZero = proportionLimits[abs(deltaStrip) - 1].first
-					> 0; // only check if strip has charge stored if lower limit is larger zero
+			bool lowerLimitIsLargerZero =
+					proportionLimits[abs(deltaStrip) - 1].first > 0; // only check if strip has charge stored if lower limit is larger zero
 
 			bool stripChargeIsStored =
 					(stripIndexInCrossSection >= 0 // too far to the left in the array?
@@ -308,6 +324,42 @@ public:
 		}
 
 		return !absolutePositionCut && !proportionCut;
+	}
+
+	int calculateClusterSize(
+			vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTime,
+			int positionOfMaxCharge) {
+
+		int clusterStart = 0;
+		int clusterEnd = 0;
+		int delta = 1;
+
+		while (true) {
+			bool finish = true;
+			if (positionOfMaxCharge + delta
+					< stripAndChargeAtMaxChargeTime.size()) {
+				if (stripAndChargeAtMaxChargeTime[positionOfMaxCharge + delta].first
+						== stripAndChargeAtMaxChargeTime[positionOfMaxCharge].first
+								+ delta) {
+					clusterEnd = delta;
+					finish = false;
+				}
+			}
+
+			if (positionOfMaxCharge - delta != -1) {
+				if (stripAndChargeAtMaxChargeTime[positionOfMaxCharge - delta].first
+						== stripAndChargeAtMaxChargeTime[positionOfMaxCharge].first
+								- delta) {
+					clusterStart = -delta;
+					finish = false;
+				}
+			}
+			delta++;
+			if (finish) {
+				break;
+			}
+		}
+		return clusterEnd - clusterStart + 1;
 	}
 
 	void findMaxCharge() {
@@ -412,6 +464,7 @@ public:
 			}
 		}
 	}
-};
+}
+;
 
 #endif
