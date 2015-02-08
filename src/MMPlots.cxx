@@ -5,13 +5,15 @@
 #include "TFitResultPtr.h"
 #include "TFitResult.h"
 #include "TCanvas.h"
+#include "Helper.h"
+
 #include <set>
 /*
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 10000
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 5
 
 /*
  * Cuts
@@ -45,6 +47,8 @@ map<string, TH2F*> general_mapHist2D;	//2D histogram of analysis for each run
 map<string, TH1F*> general_mapPlotFit;		//plot of fits
 map<string, TH2F*> general_mapCombined;		//combined Plots
 map<string, TH1F*> general_mapCombined1D;
+
+map<string, TH2F*> global_mapCombined2D;
 
 Double_t m_TotalEventNumber;
 vector<double> eventTimes;
@@ -91,13 +95,6 @@ CutStatistic absolutePositionYCuts("eabsolutePositionYCuts");
 CutStatistic proportionYCuts("gproportionYCuts");
 CutStatistic fitProblemCuts("hfitProblemCuts");
 CutStatistic fitMeanMaxChargeDistanceCuts("ifitMeanMaxChargeDistanceCuts");
-
-//set output path and name of output files
-const string inPath = "/localscratch/praktikum/data/";		//Path of the Input
-const string outPath = "/localscratch/praktikum/output/"; // Path of the Output
-//const string outPath = "/tmp/output/"; // Path of the Output
-const string appendName = "";					// Name of single measurements
-const string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war.
 
 /**
  * Returns true for every Nth eventNumber so that about 100-200 times true is returned for any number of events
@@ -456,27 +453,10 @@ void plotHitWidthGraph(std::string name, std::string xTitle,
 	hitWidthVsV.Fit("pol1", "q");
 	hitWidthVsV.Write(hitWidthVsV.GetTitle());
 
-	std::stringstream pdfName;
-	pdfName << outPath << driftGap << "/" << hitWidthVsV.GetName() << ".pdf";
+	std::stringstream subfolder;
+	subfolder << driftGap;
 
-	TCanvas canvas("c1", "sub data", 200, 10, 700, 500);
-	hitWidthVsV.Draw("AP");
-	canvas.Print(pdfName.str().c_str(), "pdf");
-}
-
-void writeHistoToPDF(TH1* histo, double driftGap) {
-	std::stringstream pdfName;
-	pdfName << outPath << driftGap << "/";
-
-	std::stringstream mkdir;
-	mkdir << "mkdir -p " << pdfName.str();
-	system(mkdir.str().c_str());
-
-	pdfName << histo->GetName() << ".pdf";
-
-	TCanvas canvas("c1", "sub data", 200, 10, 700, 500);
-	histo->Draw("colz");
-	canvas.Print(pdfName.str().c_str(), "pdf");
+	writeToPdf<TGraph>(&hitWidthVsV, subfolder.str(), "AP");
 }
 
 // Main Program
@@ -579,13 +559,13 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			"timeDistributionUncut", ";time section ;entries", 27, -0.5, 26.5);
 
 	general_mapCombined1D["clusterx"] = new TH1F("clusterx",
-			";x cluster size [strips]; entries", 50, 0, 50.);
+			";x cluster size [strips]; entries", 30, 0, 30.);
 	general_mapCombined1D["clustery"] = new TH1F("clustery",
-			";y cluster size [strips]; entries", 50, 0, 50.);
+			";y cluster size [strips]; entries", 30, 0, 30.);
 	general_mapCombined1D["clusterxUncut"] = new TH1F("clusterxUncut",
-			";x cluster size [strips]; entries", 50, 0, 50.);
+			";x cluster size [strips]; entries", 30, 0, 30.);
 	general_mapCombined1D["clusteryUncut"] = new TH1F("clusteryUncut",
-			";y cluster size [strips]; entries", 50, 0, 50.);
+			";y cluster size [strips]; entries", 30, 0, 30.);
 
 	int numberOfRunsToProcess = mapFile.size();
 	if (MAX_NUM_OF_RUNS_TO_BE_PROCESSED < numberOfRunsToProcess
@@ -739,7 +719,10 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
 						/ MicroMegas.driftSteps + 1,
 				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
-						/ MicroMegas.ampSteps + 1,/*insert here number of accepted events*/
+						/ MicroMegas.ampSteps + 1,
+				numberOfAcceptedEvents / lengthOfMeasurement);
+
+		global_mapCombined2D["rateVsDriftGap"]->Fill(MicroMegas.getDriftGap(),
 				numberOfAcceptedEvents / lengthOfMeasurement);
 
 		general_mapCombined["chargeX"]->SetBinContent(
@@ -754,6 +737,14 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
 						/ MicroMegas.ampSteps + 1,/*insert charge of Y here*/
 				general_mapHist1D["mmchargey"]->GetMean());
+
+		global_mapCombined2D["hitWidthYByVAVD"]->Fill(
+				MicroMegas.getVDbyFileName(Fitr->first),
+				MicroMegas.getVAbyFileName(Fitr->first),
+				general_mapHist1D["mmchargey"]->GetMean());
+		global_mapCombined2D["hitWidthYByVAVDCounter"]->Fill(
+				MicroMegas.getVDbyFileName(Fitr->first),
+				MicroMegas.getVAbyFileName(Fitr->first), 1);
 
 		general_mapCombined["chargeXfieldStrength"]->SetBinContent(
 				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
@@ -851,7 +842,9 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	fileCombined->cd();
 	for (map<string, TH2F*>::iterator iter = general_mapCombined.begin();
 			iter != general_mapCombined.end(); iter++) {
-		writeHistoToPDF(iter->second, MicroMegas.driftGap);
+		std::stringstream subfolder;
+		subfolder << MicroMegas.driftGap;
+		writeTH2FToPdf(iter->second, subfolder.str(), "colz");
 		iter->second->Write();
 		delete iter->second;
 	}
@@ -902,7 +895,9 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		/*
 		 * write PDF
 		 */
-		writeHistoToPDF(iter->second, MicroMegas.driftGap);
+		stringstream subfolder;
+		subfolder << MicroMegas.driftGap;
+		writeToPdf<TH1F>(iter->second, subfolder.str(), "colz");
 		delete iter->second;
 	}
 
@@ -943,6 +938,17 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 
 // Main Program
 int main(int argc, char *argv[]) {
+
+	global_mapCombined2D["rateVsDriftGap"] = new TH2F("rateVsDriftGap",
+			";Drift gap [mm]; rate [Hz]", 24, 4, 16, 20, 0, 500);
+
+	global_mapCombined2D["hitWidthYByVAVD"] = new TH2F("hitWidthYByVAVD",
+			";VD [V]; VA [V];Hit width [strips]", (1250 - 50) / 50, 0, 1250, 3,
+			488, 563);
+	global_mapCombined2D["hitWidthYByVAVDCounter"] = new TH2F(
+			"hitWidthYByVAVDCounter", ";VD [V]; VA [V]", (1250 - 50) / 50, 0,
+			1250, 3, 488, 563);
+
 	gStyle->SetOptFit(1111);
 
 	gStyle->SetStatY(0.9);
@@ -961,6 +967,21 @@ int main(int argc, char *argv[]) {
 				averageHitwidthsXError, averageHitwidthsYError);
 	}
 
+	/*
+	 * Calculate average values of hitWidthYByVAVD
+	 */
+	TH2F* hitWidthHisto = global_mapCombined2D["hitWidthYByVAVD"];
+	TH2F* hitWidthCounter = global_mapCombined2D["hitWidthYByVAVDCounter"];
+	for (int i = 0; i < hitWidthHisto->GetSize(); i++) {
+		if (hitWidthCounter->GetBinContent(i) > 0) {
+			double average = hitWidthHisto->GetBinContent(i)
+					/ hitWidthCounter->GetBinContent(i);
+			hitWidthHisto->SetBinContent(i, average);
+		}
+	}
+	delete global_mapCombined2D["hitWidthYByVAVDCounter"];
+	global_mapCombined2D.erase("hitWidthYByVAVDCounter");
+
 // Set all driftgap errors to 0.1 mm
 	std::vector<double> driftGapErrors;
 	for (unsigned int i = 0; i < driftGaps.size(); i++) {
@@ -974,22 +995,37 @@ int main(int argc, char *argv[]) {
 			(Option_t*) "RECREATE");
 
 	fileCombined->cd();
-	TGraphErrors* hitWidthVsDriftGapX = new TGraphErrors(driftGaps.size(),
-			&driftGaps[0], &averageHitwidthsX[0], &driftGapErrors[0],
+	TGraphErrors hitWidthVsDriftGapX(driftGaps.size(), &driftGaps[0],
+			&averageHitwidthsX[0], &driftGapErrors[0],
 			&averageHitwidthsXError[0]);
-	hitWidthVsDriftGapX->SetTitle("hitWidthVsDriftGapX");
-	hitWidthVsDriftGapX->GetXaxis()->SetTitle("driftGap [mm]");
-	hitWidthVsDriftGapX->GetYaxis()->SetTitle("average hit width [strips]");
-	hitWidthVsDriftGapX->Fit("pol1", "q");
-	hitWidthVsDriftGapX->Write("hitWidthVsDriftGapX");
+	hitWidthVsDriftGapX.SetName("hitWidthVsDriftGapX");
+	hitWidthVsDriftGapX.GetXaxis()->SetTitle("driftGap [mm]");
+	hitWidthVsDriftGapX.GetYaxis()->SetTitle("average hit width [strips]");
+	hitWidthVsDriftGapX.Fit("pol1", "q");
+	hitWidthVsDriftGapX.Write("hitWidthVsDriftGapX");
 
-	TGraphErrors* hitWidthVsDriftGapY = new TGraphErrors(driftGaps.size(),
-			&driftGaps[0], &averageHitwidthsY[0], &driftGapErrors[0],
+	writeToPdf<TGraph>(&hitWidthVsDriftGapX, "results", "AP");
+
+	TGraphErrors hitWidthVsDriftGapY(driftGaps.size(), &driftGaps[0],
+			&averageHitwidthsY[0], &driftGapErrors[0],
 			&averageHitwidthsYError[0]);
-	hitWidthVsDriftGapY->SetTitle("hitWidthVsDriftGapY");
-	hitWidthVsDriftGapY->GetXaxis()->SetTitle("driftGap [mm]");
-	hitWidthVsDriftGapY->GetYaxis()->SetTitle("average hit width [strips]");
-	hitWidthVsDriftGapY->Fit("pol1", "q");
-	hitWidthVsDriftGapY->Write("hitWidthVsDriftGapY");
+	hitWidthVsDriftGapY.SetName("hitWidthVsDriftGapY");
+	hitWidthVsDriftGapY.GetXaxis()->SetTitle("driftGap [mm]");
+	hitWidthVsDriftGapY.GetYaxis()->SetTitle("average hit width [strips]");
+	hitWidthVsDriftGapY.Fit("pol1", "q");
+	hitWidthVsDriftGapY.Write("hitWidthVsDriftGapY");
+
+	writeToPdf<TGraph>(&hitWidthVsDriftGapY, "results", "AP");
+
+	fileCombined->cd();
+	for (auto& pair : global_mapCombined2D) {
+		pair.second->SetOption("error");
+		pair.second->Write();
+
+		writeTH2FToPdf(pair.second, "results", "colz");
+
+		delete pair.second;
+	}
+
 	fileCombined->Close();
 }
