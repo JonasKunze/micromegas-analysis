@@ -13,7 +13,7 @@
  * -1 means all events will be processed
  */
 #define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 10000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 5
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 2
 
 /*
  * Cuts
@@ -108,7 +108,7 @@ bool storeHistogram(int eventNumber) {
 					&& MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 1000));
 }
 
-void fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
+TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		std::vector<double>& VDsForGraphs, std::vector<double>& VAsForGraphs,
 		std::vector<double>& hitWidthForGraphs,
 		std::vector<double>& hitWidthForVDError, int VD, int VA) {
@@ -124,6 +124,7 @@ void fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		hitWidthForGraphs.push_back(widthHistFitResult->GetParameter(1));
 		hitWidthForVDError.push_back(widthHistFitResult->GetParError(1));
 	}
+	return widthHistFitResult;
 }
 
 TF1* fitGauss(
@@ -424,6 +425,8 @@ void plotHitWidthGraph(std::string name, std::string xTitle,
 		std::vector<double> hitWidthErrors, std::vector<double> parameters,
 		double parameterValue, double driftGap) {
 
+	gStyle->SetStatW(0.2);
+
 	std::vector<double> xValuesFiltered;
 	std::vector<double> yValuesFiltered;
 	std::vector<double> yValueErrorsFiltered;
@@ -486,32 +489,32 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	std::cout << combinedFileName.str() << std::endl;
 	TFile* fileCombined = new TFile(combinedFileName.str().c_str(),
 			(Option_t*) "RECREATE");
-	general_mapCombined["rate"] = new TH2F("rate", ";V_Drift ;V_Amp",
+	general_mapCombined["rate"] = new TH2F("rate", ";VDrift [V];VAmp [V];rate [Hz]",
 			numberOfXBins, firstXBinValue, lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeX"] = new TH2F("chargeX",
-			";VDrift [V] ;VAmp [V]", numberOfXBins, firstXBinValue,
+			";VDrift [V];VAmp [V];Charge", numberOfXBins, firstXBinValue,
 			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
-	general_mapCombined["chargeY"] = new TH2F("chargeY", ";VDrift [V];VAmp [V]",
+	general_mapCombined["chargeY"] = new TH2F("chargeY", ";VDrift [V];VAmp [V];Charge",
 			numberOfXBins, firstXBinValue, lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["chargeXfieldStrength"] = new TH2F(
-			"chargeXfieldStrength", ";Drift field strength [kV/m] ;VAmp [V]",
+			"chargeXfieldStrength", ";Drift field strength [kV/m] ;VAmp [V];Charge",
 			numberOfXBins, firstXBinValue / MicroMegas.driftGap,
 			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeYfieldStrength"] = new TH2F(
-			"chargeYfieldStrength", ";Drift field strength [kV/m] ;VAmp [V]",
+			"chargeYfieldStrength", ";Drift field strength [kV/m] ;VAmp [V];Charge",
 			numberOfXBins, firstXBinValue / MicroMegas.driftGap,
 			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
@@ -519,24 +522,24 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["chargeXuncut"] = new TH2F("chargeXuncut",
-			";VDrift [V] ;VAmp [V]", numberOfXBins, firstXBinValue,
+			";VDrift [V] ;VAmp [V];Charge", numberOfXBins, firstXBinValue,
 			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeYuncut"] = new TH2F("chargeYuncut",
-			";VDrift [V] ;VAmp [V]", numberOfXBins, firstXBinValue,
+			";VDrift [V] ;VAmp [V];Charge", numberOfXBins, firstXBinValue,
 			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["mmhitneighboursX"] = new TH2F("mmhitneighboursX",
-			";distance [strips]; relative charge [% of max]", 21, -10, 10, 21,
+			";distance [strips]; relative charge [% of max];Count", 21, -10, 10, 21,
 			0, 100);
 
 	general_mapCombined["mmhitneighboursY"] = new TH2F("mmhitneighboursY",
-			";distance [strips]; relative charge [% of max]", 21, -10, 10, 21,
+			";distance [strips]; relative charge [% of max];Count", 21, -10, 10, 21,
 			0, 100);
 
 	general_mapCombined1D["chargexAllEvents"] = new TH1F("chargexAllEvents",
@@ -672,13 +675,24 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		 */
 		int VD = MicroMegas.getVDbyFileName(Fitr->first);
 		int VA = MicroMegas.getVAbyFileName(Fitr->first);
-		fitHitWidhtHistogram(general_mapHist1D["mmhitWidthX"],
+		TF1* hitWidthFitResultsX = fitHitWidhtHistogram(
+				general_mapHist1D["mmhitWidthX"],
 				general_mapCombined1D["hitWidthX"], VDsForGraphsX,
 				VAsForGraphsX, hitWidthsX, hitWidthsXErrors, VD, VA);
 
-		fitHitWidhtHistogram(general_mapHist1D["mmhitWidthY"],
+		TF1* hitWidthFitResultsY = fitHitWidhtHistogram(
+				general_mapHist1D["mmhitWidthY"],
 				general_mapCombined1D["hitWidthY"], VDsForGraphsY,
 				VAsForGraphsY, hitWidthsY, hitWidthsYErrors, VD, VA);
+
+		if (hitWidthFitResultsY) {
+			global_mapCombined2D["hitWidthYByVAVD"]->Fill(VD, VA,
+					hitWidthFitResultsY->GetParameter(1));
+
+			global_mapCombined2D["hitWidthYByVAVDCounter"]->Fill(
+					MicroMegas.getVDbyFileName(Fitr->first),
+					MicroMegas.getVAbyFileName(Fitr->first), 1);
+		}
 
 		float lengthOfMeasurement = 0.;
 		if (!eventTimes.empty()) {
@@ -722,6 +736,13 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 						/ MicroMegas.ampSteps + 1,
 				numberOfAcceptedEvents / lengthOfMeasurement);
 
+		global_mapCombined2D["RateByVAVD"]->Fill(VD, VA,
+				numberOfAcceptedEvents / lengthOfMeasurement);
+
+		global_mapCombined2D["RateByVAVDCounter"]->Fill(
+				MicroMegas.getVDbyFileName(Fitr->first),
+				MicroMegas.getVAbyFileName(Fitr->first), 1);
+
 		global_mapCombined2D["rateVsDriftGap"]->Fill(MicroMegas.getDriftGap(),
 				numberOfAcceptedEvents / lengthOfMeasurement);
 
@@ -737,14 +758,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
 						/ MicroMegas.ampSteps + 1,/*insert charge of Y here*/
 				general_mapHist1D["mmchargey"]->GetMean());
-
-		global_mapCombined2D["hitWidthYByVAVD"]->Fill(
-				MicroMegas.getVDbyFileName(Fitr->first),
-				MicroMegas.getVAbyFileName(Fitr->first),
-				general_mapHist1D["mmchargey"]->GetMean());
-		global_mapCombined2D["hitWidthYByVAVDCounter"]->Fill(
-				MicroMegas.getVDbyFileName(Fitr->first),
-				MicroMegas.getVAbyFileName(Fitr->first), 1);
 
 		general_mapCombined["chargeXfieldStrength"]->SetBinContent(
 				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
@@ -936,23 +949,43 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	fileCombined->Close();
 }
 
+/*
+ * Devides every bin content in histo by the according bin content in histoCounter
+ */
+void calculateAveragesFromTH2F(TH2F* histo, TH2F* histoCounter) {
+	for (int i = 0; i < histo->GetSize(); i++) {
+		if (histoCounter->GetBinContent(i) > 0) {
+			double average = histo->GetBinContent(i)
+					/ histoCounter->GetBinContent(i);
+			histo->SetBinContent(i, average);
+		}
+	}
+	global_mapCombined2D.erase(histoCounter->GetName());
+	delete histoCounter;
+}
+
 // Main Program
 int main(int argc, char *argv[]) {
 
 	global_mapCombined2D["rateVsDriftGap"] = new TH2F("rateVsDriftGap",
-			";Drift gap [mm]; rate [Hz]", 24, 4, 16, 20, 0, 500);
+			";Drift gap [mm]; Rate [Hz]; Counts", 24, 4, 16, 20, 0, 500);
 
 	global_mapCombined2D["hitWidthYByVAVD"] = new TH2F("hitWidthYByVAVD",
 			";VD [V]; VA [V];Hit width [strips]", (1250 - 50) / 50, 0, 1250, 3,
 			488, 563);
 	global_mapCombined2D["hitWidthYByVAVDCounter"] = new TH2F(
-			"hitWidthYByVAVDCounter", ";VD [V]; VA [V]", (1250 - 50) / 50, 0,
+			"hitWidthYByVAVDCounter", ";VD [V]; VA [V]; Counts", (1250 - 50) / 50, 0,
 			1250, 3, 488, 563);
 
-	gStyle->SetOptFit(1111);
+	global_mapCombined2D["RateByVAVD"] = new TH2F("RateByVAVD",
+			";VD [V]; VA [V];Hit width [strips];Rate [Hz]", (1250 - 50) / 50, 0, 1250, 3,
+			488, 563);
+	global_mapCombined2D["RateByVAVDCounter"] = new TH2F("RateByVAVDCounter",
+			";VD [V]; VA [V];Counts", (1250 - 50) / 50, 0, 1250, 3, 488, 563);
 
-	gStyle->SetStatY(0.9);
-	gStyle->SetStatX(0.3);
+	/*
+	 * Set default style options
+	 */
 
 	std::vector<double> averageHitwidthsX;
 	std::vector<double> averageHitwidthsXError;
@@ -970,17 +1003,10 @@ int main(int argc, char *argv[]) {
 	/*
 	 * Calculate average values of hitWidthYByVAVD
 	 */
-	TH2F* hitWidthHisto = global_mapCombined2D["hitWidthYByVAVD"];
-	TH2F* hitWidthCounter = global_mapCombined2D["hitWidthYByVAVDCounter"];
-	for (int i = 0; i < hitWidthHisto->GetSize(); i++) {
-		if (hitWidthCounter->GetBinContent(i) > 0) {
-			double average = hitWidthHisto->GetBinContent(i)
-					/ hitWidthCounter->GetBinContent(i);
-			hitWidthHisto->SetBinContent(i, average);
-		}
-	}
-	delete global_mapCombined2D["hitWidthYByVAVDCounter"];
-	global_mapCombined2D.erase("hitWidthYByVAVDCounter");
+	calculateAveragesFromTH2F(global_mapCombined2D["hitWidthYByVAVD"],
+			global_mapCombined2D["hitWidthYByVAVDCounter"]);
+	calculateAveragesFromTH2F(global_mapCombined2D["RateByVAVD"],
+			global_mapCombined2D["RateByVAVDCounter"]);
 
 // Set all driftgap errors to 0.1 mm
 	std::vector<double> driftGapErrors;
@@ -1018,6 +1044,7 @@ int main(int argc, char *argv[]) {
 	writeToPdf<TGraph>(&hitWidthVsDriftGapY, "results", "AP");
 
 	fileCombined->cd();
+	gStyle->SetOptStat(0);
 	for (auto& pair : global_mapCombined2D) {
 		pair.second->SetOption("error");
 		pair.second->Write();
