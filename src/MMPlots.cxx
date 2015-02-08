@@ -10,14 +10,14 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 5
 
 /*
  * Cuts
  */
 // Minimal charge required for the strip with maximum charge
-#define MIN_CHARGE_X 50
+#define MIN_CHARGE_X 55
 #define MIN_CHARGE_Y 120
 //#define MIN_CHARGE_X 0
 //#define MIN_CHARGE_Y 0
@@ -310,48 +310,45 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 //storage after procession
 //Fill trees	(replace 1)
-	if (/*condition to store the fit*/fitHistoY != NULL && fitHistoX != NULL) {
-		gauss.gaussXmean = gaussFitX->GetParameter(1);
-		gauss.gaussXmeanError = gaussFitX->GetParError(1);
-		gauss.gaussXsigma = gaussFitX->GetParameter(2);
-		gauss.gaussXcharge = gaussFitX->GetParameter(0);
-		gauss.gaussXchi = gaussFitX->GetChisquare();
-		gauss.gaussXdof = gaussFitX->GetNDF();
-		gauss.gaussXchiRed = gaussFitX->GetChisquare() / gaussFitX->GetNDF();
-		gauss.gaussYmean = gaussFitY->GetParameter(1);
-		gauss.gaussYmeanError = gaussFitY->GetParError(1);
-		gauss.gaussYsigma = gaussFitY->GetParameter(2);
-		gauss.gaussYcharge = gaussFitY->GetParameter(0);
-		gauss.gaussYchi = gaussFitY->GetChisquare();
-		gauss.gaussYdof = gaussFitY->GetNDF();
-		gauss.gaussYchiRed = gaussFitY->GetChisquare() / gaussFitY->GetNDF();
-		gauss.number = eventNumber;
+	gauss.gaussXmean = gaussFitX->GetParameter(1);
+	gauss.gaussXmeanError = gaussFitX->GetParError(1);
+	gauss.gaussXsigma = gaussFitX->GetParameter(2);
+	gauss.gaussXcharge = gaussFitX->GetParameter(0);
+	gauss.gaussXchi = gaussFitX->GetChisquare();
+	gauss.gaussXdof = gaussFitX->GetNDF();
+	gauss.gaussXchiRed = gaussFitX->GetChisquare() / gaussFitX->GetNDF();
+	gauss.gaussYmean = gaussFitY->GetParameter(1);
+	gauss.gaussYmeanError = gaussFitY->GetParError(1);
+	gauss.gaussYsigma = gaussFitY->GetParameter(2);
+	gauss.gaussYcharge = gaussFitY->GetParameter(0);
+	gauss.gaussYchi = gaussFitY->GetChisquare();
+	gauss.gaussYdof = gaussFitY->GetNDF();
+	gauss.gaussYchiRed = gaussFitY->GetChisquare() / gaussFitY->GetNDF();
+	gauss.number = eventNumber;
 
-		general_mapHist1D["mmhitWidthX"]->Fill(gauss.gaussXsigma);
-		general_mapHist1D["mmhitWidthY"]->Fill(gauss.gaussYsigma);
+	general_mapHist1D["mmhitWidthX"]->Fill(gauss.gaussXsigma);
+	general_mapHist1D["mmhitWidthY"]->Fill(gauss.gaussYsigma);
 
-		/*
-		 * ???
-		 * Was ist hier zu tun?
-		 */
-		maxi.maxXmean = event->maxChargeX;
-		maxi.maxYmean = event->maxChargeY;
-		maxi.maxXcharge = 1;
-		maxi.maxYcharge = 1;
-		maxi.maxXcluster = 1;
-		maxi.maxYcluster = 1;
-		maxi.number = eventNumber;
+	/*
+	 * ???
+	 * Was ist hier zu tun?
+	 */
+	maxi.maxXmean = event->maxChargeX;
+	maxi.maxYmean = event->maxChargeY;
+	maxi.maxXcharge = 1;
+	maxi.maxYcharge = 1;
+	maxi.maxXcluster = 1;
+	maxi.maxYcluster = 1;
+	maxi.number = eventNumber;
 
-		general_mapTree["fits"]->Fill();
+	general_mapTree["fits"]->Fill();
 
-		if (storeHistogram(eventNumber)) {
-			general_mapPlotFit[std::string(fitHistoX->GetName())] = fitHistoX;
-			general_mapPlotFit[std::string(fitHistoY->GetName())] = fitHistoY;
-		} else {
-			delete fitHistoY;
-			delete fitHistoX;
-		}
-
+	if (storeHistogram(eventNumber)) {
+		general_mapPlotFit[std::string(fitHistoX->GetName())] = fitHistoX;
+		general_mapPlotFit[std::string(fitHistoY->GetName())] = fitHistoY;
+	} else {
+		delete fitHistoY;
+		delete fitHistoX;
 	}
 
 	// coincidence check between x and y signal (within 25ns)
@@ -475,10 +472,11 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	std::cout << combinedFileName.str() << std::endl;
 	TFile* fileCombined = new TFile(combinedFileName.str().c_str(),
 			(Option_t*) "RECREATE");
-//	general_mapCombined["rate"] = new TH2F("rate", ";V_Drift ;V_Amp",
-//			numberOfXBins, firstXBinValue, lastXBinValue,
-//			(ampEnd - ampStart) / ampSteps + 1, ampStart - 0.5 * ampSteps,
-//			ampEnd + 0.5 * ampSteps);
+	general_mapCombined["rate"] = new TH2F("rate", ";V_Drift ;V_Amp",
+			numberOfXBins, firstXBinValue, lastXBinValue,
+			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
+			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
+			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeX"] = new TH2F("chargeX",
 			";VDrift [V] ;VAmp [V]", numberOfXBins, firstXBinValue,
 			lastXBinValue,
@@ -637,9 +635,11 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		m_TotalEventNumber = m_event->getEventNumber();
 
 		// loop over all events
+		int numberOfAcceptedEvents = 0;
 		while (m_event->getNextEvent()
 				&& eventNumber != MAX_NUM_OF_EVENTS_TO_BE_PROCESSED) {
 			if (analyseMMEvent(m_event, eventNumber, TRGBURST) == true) {
+				numberOfAcceptedEvents++;
 			}
 			eventNumber++;
 		}
@@ -657,47 +657,47 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				general_mapCombined1D["hitWidthY"], VDsForGraphsY,
 				VAsForGraphsY, hitWidthsY, hitWidthsYErrors, VD, VA);
 
-//		float lengthOfMeasurement = 0.;
-//		if (!eventTimes.empty()) {
-//			// fill dtime + rate hist
-//			vector<double> ratesOverMeasurementTime;
-//			sort(eventTimes.begin(), eventTimes.end());
-//			float tempDeltaTime = 0.;
-//			float timePeriod = 30.; // time period for rate hist (10 s)
-//			int periodCount = 0;
-//			int beginOfTimePeriod = 0;
-//			double lastTime = eventTimes.at(0);
-//			for (int e = 1; e < eventTimes.size(); e++) { // start at 1 because first is already loaded
-//				float deltaTime = eventTimes.at(e) - lastTime;
-//				if (deltaTime < 1000.) { // to get malformed events out
-//					general_mapHist1D["mmdtime"]->Fill(deltaTime);
-//					lengthOfMeasurement += deltaTime;
-//					tempDeltaTime += deltaTime;
-//					if (tempDeltaTime >= timePeriod) {
-//						ratesOverMeasurementTime.push_back(
-//								e - beginOfTimePeriod);
-////						general_mapHist1D["mmrate"]->Fill(
-////								(e - beginOfTimePeriod) / tempDeltaTime);
-//						periodCount++;
-//						beginOfTimePeriod = e;
-//						tempDeltaTime = 0.;
-//					}
-//				}
-//				lastTime = eventTimes.at(e);
-//			}
-//			eventTimes.clear(); // clear vector for next measurement
-//		}
+		float lengthOfMeasurement = 0.;
+		if (!eventTimes.empty()) {
+			// fill dtime + rate hist
+			vector<double> ratesOverMeasurementTime;
+			sort(eventTimes.begin(), eventTimes.end());
+			float tempDeltaTime = 0.;
+			float timePeriod = 30.; // time period for rate hist (10 s)
+			int periodCount = 0;
+			int beginOfTimePeriod = 0;
+			double lastTime = eventTimes.at(0);
+			for (unsigned int e = 1; e < eventTimes.size(); e++) { // start at 1 because first is already loaded
+				float deltaTime = eventTimes.at(e) - lastTime;
+				if (deltaTime < 1000.) { // to get malformed events out
+					general_mapHist1D["mmdtime"]->Fill(deltaTime);
+					lengthOfMeasurement += deltaTime;
+					tempDeltaTime += deltaTime;
+					if (tempDeltaTime >= timePeriod) {
+						ratesOverMeasurementTime.push_back(
+								e - beginOfTimePeriod);
+//						general_mapHist1D["mmrate"]->Fill(
+//								(e - beginOfTimePeriod) / tempDeltaTime);
+						periodCount++;
+						beginOfTimePeriod = e;
+						tempDeltaTime = 0.;
+					}
+				}
+				lastTime = eventTimes.at(e);
+			}
+			eventTimes.clear(); // clear vector for next measurement
+		}
 
 		//delete m_event to clear cache
 		delete m_event;
 
 		fileCombined->cd();
-//		general_mapCombined["rate"]->SetBinContent(
-//				(atoi(Fitr->first.substr(2, 3).c_str()) - driftStart)
-//						/ driftSteps + 1,
-//				(atoi(Fitr->first.substr(7, 3).c_str()) - ampStart) / ampSteps
-//						+ 1,/*insert here number of events*/
-//				eventNumber / lengthOfMeasurement);
+		general_mapCombined["rate"]->SetBinContent(
+				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
+						/ MicroMegas.driftSteps + 1,
+				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
+						/ MicroMegas.ampSteps + 1,/*insert here number of accepted events*/
+				numberOfAcceptedEvents / lengthOfMeasurement);
 
 		general_mapCombined["chargeX"]->SetBinContent(
 				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
@@ -846,7 +846,8 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		}
 		gDirectory->cd("..");
 	}
-	fileCombined->cd("..");
+
+	fileCombined->cd("");
 
 	/*
 	 * Write any TH1F to the file and to pdf
@@ -901,6 +902,9 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 int main(int argc, char *argv[]) {
 	gStyle->SetOptFit(1111);
 
+	gStyle->SetStatY(0.9);
+	gStyle->SetStatX(0.3);
+
 	std::vector<double> averageHitwidthsX;
 	std::vector<double> averageHitwidthsXError;
 	std::vector<double> averageHitwidthsY;
@@ -916,7 +920,7 @@ int main(int argc, char *argv[]) {
 
 // Set all driftgap errors to 0.1 mm
 	std::vector<double> driftGapErrors;
-	for (int i = 0; i < driftGaps.size(); i++) {
+	for (unsigned int i = 0; i < driftGaps.size(); i++) {
 		driftGapErrors.push_back(0.1);
 	}
 

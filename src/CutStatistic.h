@@ -27,7 +27,7 @@ public:
 		instances.push_back(this);
 	}
 
-	void Fill(double value, MMQuickEvent* event);
+	void Fill(double value, MMQuickEvent* event, std::string suffix="");
 
 	const char* getName() {
 		return counterHistogram.GetName();

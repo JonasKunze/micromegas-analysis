@@ -202,8 +202,8 @@ public:
 	bool runProportionCut(TH2F* maxNeighbourHisto,
 			vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTime,
 			short maxCharge, std::vector<std::pair<int, int> > proportionLimits,
-			CutStatistic& absolutePositionCuts,
-			CutStatistic& proportionCuts, bool lastProportionCut) {
+			CutStatistic& absolutePositionCuts, CutStatistic& proportionCuts,
+			bool lastProportionCut) {
 
 		if (stripAndChargeAtMaxChargeTime.size() == 0) {
 			return false;
@@ -233,6 +233,7 @@ public:
 		 */
 		bool absolutePositionCut = false;
 		bool proportionCut = false;
+		std::stringstream msg;
 		const int maxDistance = proportionLimits.size();
 		for (int deltaStrip = -maxDistance; deltaStrip <= maxDistance;
 				deltaStrip++) {
@@ -252,8 +253,8 @@ public:
 					stripAndChargeAtMaxChargeTime[positionOfMaxCharge].first
 							+ deltaStrip > xStrips; // absolute strip too far to the left
 
-			bool lowerLimitIsZero = proportionLimits[abs(deltaStrip) - 1].first
-					== 0; // only check if strip has charge stored if lower limit is not zero
+			bool lowerLimitIsLargerZero = proportionLimits[abs(deltaStrip) - 1].first
+					> 0; // only check if strip has charge stored if lower limit is larger zero
 
 			bool stripChargeIsStored =
 					(stripIndexInCrossSection >= 0 // too far to the left in the array?
@@ -266,8 +267,9 @@ public:
 			double proportion = NAN;
 			if (tooFarToTheRight || tooFarToTheLeft) {
 				absolutePositionCut = true;
-			} else if (!stripChargeIsStored && !lowerLimitIsZero) {
+			} else if (!stripChargeIsStored && lowerLimitIsLargerZero) {
 				proportionCut = true;
+				msg << "!!!";
 			} else {
 				if (stripChargeIsStored) {
 					proportion =
@@ -280,6 +282,7 @@ public:
 							|| proportion
 									> proportionLimits[abs(deltaStrip) - 1].second) {
 						proportionCut = true;
+						msg << "_" << deltaStrip << "=" << proportion;
 					}
 				}
 			}
@@ -297,9 +300,9 @@ public:
 				absolutePositionCuts.Fill(0, this);
 
 				if (proportionCut) {
-					proportionCuts.Fill(1, this);
+					proportionCuts.Fill(1, this, msg.str());
 				} else {
-					proportionCuts.Fill(0, this);
+					proportionCuts.Fill(0, this, msg.str());
 				}
 			}
 		}
@@ -355,7 +358,8 @@ public:
 	 * Generates a new 2D histogram (heatmap) showing all measured charges in all strips of x or y direction of all times slices.
 	 * The histogram will be stored at general_mapHist2DEvent[eventNumber+"nameOfHistogram"]
 	 */
-	void generateEventDisplay(TH2F* &eventDisplayX, TH2F* &eventDisplayY, std::string suffix="") {
+	void generateEventDisplay(TH2F* &eventDisplayX, TH2F* &eventDisplayY,
+			std::string suffix = "") {
 		vector<vector<short> > chargeOfTimeOfStrip = *apv_q;
 		unsigned int numberOfTimeSlices = chargeOfTimeOfStrip[0].size();
 

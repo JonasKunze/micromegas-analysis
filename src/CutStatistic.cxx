@@ -11,14 +11,14 @@
 
 std::vector<CutStatistic*> CutStatistic::instances;
 
-void CutStatistic::Fill(double value, MMQuickEvent* event) {
+void CutStatistic::Fill(double value, MMQuickEvent* event, std::string suffix) {
 	counterHistogram.Fill(value);
 
 	if (value == 1 && eventDisplaysCut.size() < 20) {
 		TH2F *eventDisplayX, *eventDisplayY;
 
 		std::stringstream eventDisplaySuffix;
-		eventDisplaySuffix << "-" << counterHistogram.GetName();
+		eventDisplaySuffix << "-" << counterHistogram.GetName() << suffix;
 		event->generateEventDisplay(eventDisplayX, eventDisplayY,
 				eventDisplaySuffix.str());
 		eventDisplaysCut.push_back(eventDisplayX);
@@ -27,7 +27,7 @@ void CutStatistic::Fill(double value, MMQuickEvent* event) {
 		TH2F *eventDisplayX, *eventDisplayY;
 
 		std::stringstream eventDisplaySuffix;
-		eventDisplaySuffix << "-" << counterHistogram.GetName();
+		eventDisplaySuffix << "-" << counterHistogram.GetName() << suffix;
 		event->generateEventDisplay(eventDisplayX, eventDisplayY,
 				eventDisplaySuffix.str());
 		eventDisplaysAccepted.push_back(eventDisplayX);
