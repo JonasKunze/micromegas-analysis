@@ -14,7 +14,7 @@
  * -1 means all events will be processed
  */
 #define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 2
 
 /*
  * Cuts
@@ -213,6 +213,13 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		timingCuts.Fill(0, event);
 	}
 
+	event->generateTimeShape(general_mapHist2D["mmtimeShapeX"],
+			event->maxChargeX, event->stripWithMaxChargeX,
+			event->timeSliceOfMaxChargeX);
+	event->generateTimeShape(general_mapHist2D["mmtimeShapeY"],
+			event->maxChargeY, event->stripWithMaxChargeY,
+			event->timeSliceOfMaxChargeY);
+
 	/*
 	 * Calculate cluster sizes
 	 */
@@ -389,8 +396,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			event->timeSliceOfMaxChargeY);
 
 	general_mapHist2D["mmhitmap"]->Fill(
-			/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],/*strip with maximum charge in Y*/
-			stripNumShowingSignal[event->stripWithMaxChargeY]);
+			/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],
+			/*strip with maximum charge in Y*/stripNumShowingSignal[event->stripWithMaxChargeY]);
 
 	general_mapCombined1D["chargexAllEvents"]->Fill(event->maxChargeX);
 	general_mapCombined1D["chargeyAllEvents"]->Fill(event->maxChargeY);
@@ -420,9 +427,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	return true;
 }
 
-void test(int i) {
-	std::cout << i << std::endl;
-}
 // Main Program
 void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		std::vector<double>& averageHitwidthsY,
@@ -447,7 +451,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	combinedFileName << outPath << MicroMegas.getDriftGap()
 			<< combinedPlotsFile;
 
-	std::cout << combinedFileName.str() << std::endl;
 	TFile* fileCombined = new TFile(combinedFileName.str().c_str(),
 			(Option_t*) "RECREATE");
 	general_mapCombined["rate"] = new TH2F("rate",
@@ -500,12 +503,12 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["mmhitneighboursX"] = new TH2F("mmhitneighboursX",
-			";distance [strips]; relative charge [% of max];Count", 21, -10, 10,
-			21, 0, 100);
+			";distance [strips]; relative charge [% of max];Count", 13, -6.5,
+			6.5, 20, 0, 100);
 
 	general_mapCombined["mmhitneighboursY"] = new TH2F("mmhitneighboursY",
-			";distance [strips]; relative charge [% of max];Count", 21, -10, 10,
-			21, 0, 100);
+			";distance [strips]; relative charge [% of max];Count", 13, -6.5,
+			6.5, 20, 0, 100);
 
 	general_mapCombined1D["chargexAllEvents"] = new TH1F("chargexAllEvents",
 			";charge X; entries", 100, 0, 1000);
@@ -522,13 +525,15 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			";sigmaRunMittel ;entries", 50, 0, 3);
 
 	general_mapCombined1D["timeDistributionX"] = new TH1F("timeDistributionX",
-			";time section ;entries", 27, -0.5, 26.5);
+			";time section ;entries", NUMBER_OF_TIME_SLICES, -0.5, 26.5);
 	general_mapCombined1D["timeDistributionY"] = new TH1F("timeDistributionY",
-			";time section ;entries", 27, -0.5, 26.5);
+			";time section ;entries", NUMBER_OF_TIME_SLICES, -0.5, 26.5);
 	general_mapCombined1D["timeDistributionUncutX"] = new TH1F(
-			"timeDistributionUncutX", ";time section ;entries", 27, -0.5, 26.5);
+			"timeDistributionUncutX", ";time section ;entries",
+			NUMBER_OF_TIME_SLICES, -0.5, 26.5);
 	general_mapCombined1D["timeDistributionUncutY"] = new TH1F(
-			"timeDistributionUncutY", ";time section ;entries", 27, -0.5, 26.5);
+			"timeDistributionUncutY", ";time section ;entries",
+			NUMBER_OF_TIME_SLICES, -0.5, 26.5);
 //	general_mapCombined1D["clusterx"] = new TH1F("clusterx",
 //			";x cluster size [strips]; entries", 30, 0, 30.);
 //	general_mapCombined1D["clustery"] = new TH1F("clustery",
@@ -609,6 +614,15 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		general_mapHist2D["mmhitmap"] = new TH2F("mmhitmap",
 				";x [strips]; y [strips]", xStrips, 0, xStrips, yStrips, 0,
 				yStrips);
+
+		general_mapHist2D["mmtimeShapeX"] = new TH2F("mmtimeShapeX",
+				";time slice [25 ns]; charge relative to maximum strip [%]",
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
+				NUMBER_OF_TIME_SLICES, 20, 0, 100);
+		general_mapHist2D["mmtimeShapeY"] = new TH2F("mmtimeShapeY",
+				";time slice [25 ns]; charge relative to maximum strip [%]",
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
+				NUMBER_OF_TIME_SLICES, 20, 0, 100);
 
 		//initialize trees with structure defined above
 		TTree* fitTree = new TTree("T", "results of gauss fit");
@@ -945,6 +959,9 @@ void calculateAveragesFromTH2F(TH2F* histo, TH2F* histoCounter) {
 
 // Main Program
 int main(int argc, char *argv[]) {
+	std::stringstream mkdir;
+	mkdir << "mkdir -p " << outPath;
+	system(mkdir.str().c_str());
 
 	global_mapCombined2D["rateVsDriftGap"] = new TH2F("rateVsDriftGap",
 			";Drift gap [mm]; Rate [Hz]; Counts", 24, 4, 16, 20, 0, 500);

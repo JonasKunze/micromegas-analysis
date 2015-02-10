@@ -42,7 +42,7 @@ void writeToPdf(T* object, std::string subfolder, std::string drawOptions) {
 		gStyle->SetStatX(0.6);
 	}
 	std::stringstream pdfName;
-	pdfName << outPath << "/" << subfolder << "/";
+	pdfName << outPath << subfolder << "/";
 
 	std::stringstream mkdir;
 	mkdir << "mkdir -p " << pdfName.str();

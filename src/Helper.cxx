@@ -21,7 +21,7 @@ void writeTH2FToPdf(TH2F* object, std::string subfolder,
 	gStyle->SetOptStat(0);
 
 	std::stringstream pdfName;
-	pdfName << outPath << "/" << subfolder << "/";
+	pdfName << outPath << subfolder << "/";
 
 	std::stringstream mkdir;
 	mkdir << "mkdir -p " << pdfName.str();

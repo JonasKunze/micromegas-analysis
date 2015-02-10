@@ -19,6 +19,8 @@ const int APVIDMM_Y2 = 2;
 const int xStrips = 360;
 const int yStrips = 360;
 
+const int NUMBER_OF_TIME_SLICES = 27;
+
 template<class T1, class T2>
 struct sort_pair_first {
 	bool operator()(const std::pair<T1, T2>&left,
@@ -234,6 +236,23 @@ public:
 					== maxChargeY) {
 				break;
 			}
+		}
+	}
+
+	void generateTimeShape(TH2F* histo, short maxCharge, int stripWithMaxCharge,
+			int timeSliceOfMaxCharge) {
+		/*
+		 * Store the charge values of every strip number for the time slice with
+		 * the maximum charge found in one event for X and Y separately (cross section
+		 * for time slices with max charge)
+		 */
+		const unsigned int numberOfTimeSlices = (*apv_q)[0].size();
+		// Iterate through all strips
+		for (unsigned int time = 0; time != numberOfTimeSlices; time++) {
+			double chargeProportion = 100
+					* (double) (*apv_q)[stripWithMaxCharge][time] / maxCharge;
+			int distanceToMax = time - timeSliceOfMaxCharge;
+			histo->Fill(distanceToMax, chargeProportion);
 		}
 	}
 
