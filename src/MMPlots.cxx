@@ -7,12 +7,13 @@
 #include "TCanvas.h"
 #include "Helper.h"
 
+#include <thread>
 #include <set>
 /*
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
@@ -51,7 +52,7 @@ map<string, TH1F*> general_mapCombined1D;
 map<string, TH2F*> global_mapCombined2D;
 
 Double_t m_TotalEventNumber;
-vector<double> eventTimes;
+vector<double> eventTimes(700000);
 
 //structure for trees
 struct gauss_t {
@@ -415,6 +416,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	return true;
 }
 
+void test(int i) {
+	std::cout << i << std::endl;
+}
 // Main Program
 void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		std::vector<double>& averageHitwidthsY,
@@ -535,14 +539,14 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	/*
 	 * Data for graphs to plot the fit width vs the value of VD for every run
 	 */
-	std::vector<double> VDsForGraphsX;
-	std::vector<double> VAsForGraphsX;
-	std::vector<double> hitWidthsX;
-	std::vector<double> hitWidthsXErrors;
-	std::vector<double> VDsForGraphsY;
-	std::vector<double> VAsForGraphsY;
-	std::vector<double> hitWidthsY;
-	std::vector<double> hitWidthsYErrors;
+	std::vector<double> VDsForGraphsX(5);
+	std::vector<double> VAsForGraphsX(3);
+	std::vector<double> hitWidthsX(5);
+	std::vector<double> hitWidthsXErrors(5);
+	std::vector<double> VDsForGraphsY(5);
+	std::vector<double> VAsForGraphsY(3);
+	std::vector<double> hitWidthsY(5);
+	std::vector<double> hitWidthsYErrors(5);
 
 // iterate of different runs in the map
 	int runNumber = 0;
@@ -654,7 +658,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		float lengthOfMeasurement = 0.;
 		if (!eventTimes.empty()) {
 			// fill dtime + rate hist
-			vector<double> ratesOverMeasurementTime;
+			vector<double> ratesOverMeasurementTime(eventTimes.size() / 2);
 			sort(eventTimes.begin(), eventTimes.end());
 			float tempDeltaTime = 0.;
 			float timePeriod = 30.; // time period for rate hist (10 s)
@@ -828,13 +832,20 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 
 		std::stringstream eventDisplayDirName;
 		eventDisplayDirName << cutStat->getName() << "events";
+
+		std::stringstream subdir;
+		subdir << MicroMegas.driftGap << "/" << eventDisplayDirName.str()
+				<< "/";
+
 		gDirectory->mkdir(eventDisplayDirName.str().c_str());
 		gDirectory->cd(eventDisplayDirName.str().c_str());
 		{
+
 			gDirectory->mkdir("Cut");
 			gDirectory->cd("Cut");
 			for (auto& display : cutStat->eventDisplaysCut) {
 				display->Write();
+				writeTH2FToPdf(display, subdir.str() + "cut", "colz");
 				delete display;
 			}
 			cutStat->eventDisplaysCut.clear();
@@ -845,6 +856,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			gDirectory->cd("Accepted");
 			for (auto& display : cutStat->eventDisplaysAccepted) {
 				display->Write();
+				writeTH2FToPdf(display, subdir.str() + "accepted", "colz");
 				delete display;
 			}
 			cutStat->eventDisplaysAccepted.clear();
@@ -886,20 +898,20 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		name << "hitWidthVsVDX-VA" << VA;
 		plotHitWidthGraph(name.str(), "VD [V]", VDsForGraphsX, hitWidthsX,
 				hitWidthsXErrors, VAsForGraphsX, VA, MicroMegas.driftGap,
-				VDsForGraphsX[0] -1, 2000); // Skip first bin as it's bad!
+				VDsForGraphsX[0] - 25, 2000); // Skip first bin as it's bad!
 		name.str("");
 		name << "hitWidthVsVDY-VA" << VA;
 		plotHitWidthGraph(name.str(), "VD [V]", VDsForGraphsY, hitWidthsY,
 				hitWidthsYErrors, VAsForGraphsY, VA, MicroMegas.driftGap,
-				VDsForGraphsX[0] -1, 2000);// Skip first bin as it's bad!
+				VDsForGraphsX[0] - 25, 2000); // Skip first bin as it's bad!
 	}
 
 	for (int VD : allVDs) {
 		std::stringstream name;
 		name << "hitWidthVsVAX-VD" << VD;
 		plotHitWidthGraph(name.str(), "VA [V]", VAsForGraphsX, hitWidthsX,
-				hitWidthsXErrors, VDsForGraphsX, VD, MicroMegas.driftGap,VAsForGraphsX[0],
-				1000);
+				hitWidthsXErrors, VDsForGraphsX, VD, MicroMegas.driftGap,
+				VAsForGraphsX[0], 1000);
 		name.str("");
 		name << "hitWidthVsVAY-VD" << VD;
 		plotHitWidthGraph(name.str(), "VA [V]", VAsForGraphsY, hitWidthsY,
@@ -954,9 +966,11 @@ int main(int argc, char *argv[]) {
 	std::vector<double> averageHitwidthsYError;
 	std::vector<double> driftGaps = MapFile::getAvailableDriftGaps();
 
-	for (std::vector<double>::iterator iter = driftGaps.begin();
-			iter != driftGaps.end(); iter++) {
-		MapFile MicroMegas(inPath, outPath, appendName, *iter);
+	/*
+	 * Run over all days (drift gaps)
+	 */
+	for (auto& driftGap : driftGaps) {
+		MapFile MicroMegas(inPath, outPath, appendName, driftGap);
 		readFiles(MicroMegas, averageHitwidthsX, averageHitwidthsY,
 				averageHitwidthsXError, averageHitwidthsYError);
 	}
@@ -983,10 +997,10 @@ int main(int argc, char *argv[]) {
 
 	fileCombined->cd();
 
-	plotHitGraphGraph("hitWidthVsDriftGapX", "DriftGap [mm]", driftGaps, 1,
+	plotGraph("hitWidthVsDriftGapX", "DriftGap [mm]", driftGaps, 1,
 			averageHitwidthsX, driftGapErrors, "results", 0, 100);
 
-	plotHitGraphGraph("hitWidthVsDriftGapY", "DriftGap [mm]", driftGaps, 1,
+	plotGraph("hitWidthVsDriftGapY", "DriftGap [mm]", driftGaps, 1,
 			averageHitwidthsY, driftGapErrors, "results", 0, 100);
 
 	fileCombined->cd();

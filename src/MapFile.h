@@ -85,7 +85,6 @@ private:
 		neighbourStripeLimitsY.push_back(std::make_pair(10, 90));
 		neighbourStripeLimitsY.push_back(std::make_pair(-5, 55));
 
-
 		if (driftGap == 4.5) {
 			driftStart = 50;
 			driftEnd = 350;
@@ -102,7 +101,6 @@ private:
 //			neighbourStripeLimitsY.push_back(std::make_pair(35, 100));
 //			neighbourStripeLimitsY.push_back(std::make_pair(15, 70));
 //			neighbourStripeLimitsY.push_back(std::make_pair(1, 30));
-
 
 			m_mapFile["VD50VA500"] = new TFile(
 					(path + appendName + "_VD50VA500.root").c_str(),

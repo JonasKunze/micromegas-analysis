@@ -37,7 +37,7 @@ void writeTH2FToPdf(TH2F* object, std::string subfolder,
 	gStyle->SetOptStat(1);
 }
 
-void plotHitGraphGraph(std::string name, std::string xTitle,
+void plotGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
 		std::vector<double> yErrors, std::string subdir, double fitRangeStart,
 		double fitRangeEnd) {
@@ -89,6 +89,6 @@ void plotHitWidthGraph(std::string name, std::string xTitle,
 	std::stringstream subfolder;
 	subfolder << driftGap;
 
-	plotHitGraphGraph(name, xTitle, xValuesFiltered, 1, yValuesFiltered,
+	plotGraph(name, xTitle, xValuesFiltered, 1, yValuesFiltered,
 			yValueErrorsFiltered, subfolder.str(), fitRangeStart, fitRangeEnd);
 }

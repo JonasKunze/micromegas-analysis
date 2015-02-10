@@ -187,8 +187,9 @@ public:
 		stripAndChargeAtMaxChargeTimeX.clear();
 		stripAndChargeAtMaxChargeTimeY.clear();
 
+		const unsigned int numberOfStrips = (*apv_q).size();
 		// Iterate through all strips
-		for (unsigned int strip = 0; strip != (*apv_q).size(); strip++) {
+		for (unsigned int strip = 0; strip != numberOfStrips; strip++) {
 			unsigned int apvID = (*apv_id)[strip];
 			if (MMQuickEvent::isX(apvID)) { // X axis
 				stripAndChargeAtMaxChargeTimeX.push_back(
@@ -213,9 +214,10 @@ public:
 		/*
 		 * Now the array is sorted, the position of the maximal charge strip is unknown -> search for it again
 		 */
+		const unsigned int numberOfXStrips =
+				stripAndChargeAtMaxChargeTimeX.size();
 		for (positionOfMaxChargeInCrossSectionX = 0;
-				positionOfMaxChargeInCrossSectionX
-						< stripAndChargeAtMaxChargeTimeX.size();
+				positionOfMaxChargeInCrossSectionX != numberOfXStrips;
 				positionOfMaxChargeInCrossSectionX++) {
 			if (stripAndChargeAtMaxChargeTimeX[positionOfMaxChargeInCrossSectionX].second
 					== maxChargeX) {
@@ -223,9 +225,10 @@ public:
 			}
 		}
 
+		const unsigned int numberOfYStrips =
+				stripAndChargeAtMaxChargeTimeX.size();
 		for (positionOfMaxChargeInCrossSectionY = 0;
-				positionOfMaxChargeInCrossSectionY
-						< stripAndChargeAtMaxChargeTimeY.size();
+				positionOfMaxChargeInCrossSectionY != numberOfYStrips;
 				positionOfMaxChargeInCrossSectionY++) {
 			if (stripAndChargeAtMaxChargeTimeY[positionOfMaxChargeInCrossSectionY].second
 					== maxChargeY) {
@@ -385,8 +388,8 @@ public:
 		 * of the strip with the maximum charge found so far for the current axis. Store current charge, strip number
 		 * and time slice with the maximum charge if the current charge is larger than before.
 		 */
-		for (unsigned int strip = 0; strip != maxChargeOfStrip.size();
-				strip++) {
+		const unsigned int numberOfStrips = maxChargeOfStrip.size();
+		for (unsigned int strip = 0; strip != numberOfStrips; strip++) {
 			unsigned int apvID = apvIDofStrip[strip];
 			if (isX(apvID)) { // X axis
 				numberOfXHits++;

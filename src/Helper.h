@@ -69,7 +69,7 @@ void plotHitWidthGraph(std::string name, std::string xTitle,
 		std::vector<double> hitWidthErrors, std::vector<double> parameters,
 		double parameterValue, double driftGap, double fitRangeStart, double fitRangeEnd);
 
-void plotHitGraphGraph(std::string name, std::string xTitle,
+void plotGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
 		std::vector<double> yErrors, std::string subdir, double fitRangeStart, double fitRangeEnd);
 

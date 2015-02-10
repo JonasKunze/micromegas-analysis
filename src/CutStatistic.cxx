@@ -9,12 +9,14 @@
 
 #include "MMQuickEvent.h"
 
+#define MAX_EVENT_DISPLAYS_PER_CUT 6
+
 std::vector<CutStatistic*> CutStatistic::instances;
 
 void CutStatistic::Fill(double value, MMQuickEvent* event, std::string suffix) {
 	counterHistogram.Fill(value);
 
-	if (value == 1 && eventDisplaysCut.size() < 20) {
+	if (value == 1 && eventDisplaysCut.size() < MAX_EVENT_DISPLAYS_PER_CUT) {
 		TH2F *eventDisplayX, *eventDisplayY;
 
 		std::stringstream eventDisplaySuffix;
@@ -23,7 +25,7 @@ void CutStatistic::Fill(double value, MMQuickEvent* event, std::string suffix) {
 				eventDisplaySuffix.str());
 		eventDisplaysCut.push_back(eventDisplayX);
 		eventDisplaysCut.push_back(eventDisplayY);
-	} else if (value == 0 && eventDisplaysAccepted.size() < 20) {
+	} else if (value == 0 && eventDisplaysAccepted.size() < MAX_EVENT_DISPLAYS_PER_CUT) {
 		TH2F *eventDisplayX, *eventDisplayY;
 
 		std::stringstream eventDisplaySuffix;
