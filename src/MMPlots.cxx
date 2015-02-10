@@ -98,15 +98,17 @@ CutStatistic fitProblemCuts("hfitProblemCuts");
 CutStatistic fitMeanMaxChargeDistanceCuts("ifitMeanMaxChargeDistanceCuts");
 
 /**
- * Returns true for every Nth eventNumber so that about 100-200 times true is returned for any number of events
+ * Returns true for every Nth eventNumber so that about totalStores times true is returned for any number of events
  */
-bool storeHistogram(int eventNumber) {
-	return ((MAX_NUM_OF_EVENTS_TO_BE_PROCESSED < 0 && eventNumber % 5000 == 0) /* every 5000th */
-			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 1000
-					&& eventNumber % (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED / 1000)
-							== 0)
+bool storeHistogram(int eventNumber, int totalStores) {
+	if (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED < 0)
+		return eventNumber % 600000 / totalStores == 0;
+
+	return (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > totalStores
+			&& eventNumber % (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED / totalStores)
+					== 0)
 			|| (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED > 0
-					&& MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= 1000));
+					&& MAX_NUM_OF_EVENTS_TO_BE_PROCESSED <= totalStores);
 }
 
 TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
@@ -202,6 +204,15 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		chargeCuts.Fill(0, event);
 	}
 
+	if (storeHistogram(eventNumber, 10000)) {
+		event->generateTimeShape(general_mapHist2D["mmtimeShapeXUncut"],
+				event->maxChargeX, event->stripWithMaxChargeX,
+				event->timeSliceOfMaxChargeX);
+		event->generateTimeShape(general_mapHist2D["mmtimeShapeYUncut"],
+				event->maxChargeY, event->stripWithMaxChargeY,
+				event->timeSliceOfMaxChargeY);
+	}
+
 	// Timing cut
 	if (event->timeSliceOfMaxChargeX < MIN_TIMESLICE
 			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE
@@ -212,13 +223,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	} else {
 		timingCuts.Fill(0, event);
 	}
-
-	event->generateTimeShape(general_mapHist2D["mmtimeShapeX"],
-			event->maxChargeX, event->stripWithMaxChargeX,
-			event->timeSliceOfMaxChargeX);
-	event->generateTimeShape(general_mapHist2D["mmtimeShapeY"],
-			event->maxChargeY, event->stripWithMaxChargeY,
-			event->timeSliceOfMaxChargeY);
 
 	/*
 	 * Calculate cluster sizes
@@ -347,6 +351,18 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		fitMeanMaxChargeDistanceCuts.Fill(0, event);
 	}
 
+	/*
+	 * ############################################################
+	 * #################### ALL CUTS DONE HERE ####################
+	 * ############################################################
+	 */
+	event->generateTimeShape(general_mapHist2D["mmtimeShapeX"],
+			event->maxChargeX, event->stripWithMaxChargeX,
+			event->timeSliceOfMaxChargeX);
+	event->generateTimeShape(general_mapHist2D["mmtimeShapeY"],
+			event->maxChargeY, event->stripWithMaxChargeY,
+			event->timeSliceOfMaxChargeY);
+
 //storage after procession
 //Fill trees	(replace 1)
 	gauss.gaussXmean = gaussFitX->GetParameter(1);
@@ -382,7 +398,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	general_mapTree["fits"]->Fill();
 
-	if (storeHistogram(eventNumber)) {
+	if (storeHistogram(eventNumber, 20)) {
 		general_mapPlotFit[std::string(fitHistoX->GetName())] = fitHistoX;
 		general_mapPlotFit[std::string(fitHistoY->GetName())] = fitHistoY;
 	} else {
@@ -620,6 +636,14 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
 				NUMBER_OF_TIME_SLICES, 20, 0, 100);
 		general_mapHist2D["mmtimeShapeY"] = new TH2F("mmtimeShapeY",
+				";time slice [25 ns]; charge relative to maximum strip [%]",
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
+				NUMBER_OF_TIME_SLICES, 20, 0, 100);
+		general_mapHist2D["mmtimeShapeXUncut"] = new TH2F("mmtimeShapeXUncut",
+				";time slice [25 ns]; charge relative to maximum strip [%]",
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
+				NUMBER_OF_TIME_SLICES, 20, 0, 100);
+		general_mapHist2D["mmtimeShapeYUncut"] = new TH2F("mmtimeShapeYUncut",
 				";time slice [25 ns]; charge relative to maximum strip [%]",
 				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
 				NUMBER_OF_TIME_SLICES, 20, 0, 100);
