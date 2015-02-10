@@ -79,7 +79,7 @@ private:
 
 		neighbourStripeLimitsX.push_back(std::make_pair(15, 100));
 		neighbourStripeLimitsX.push_back(std::make_pair(0, 85));
-		neighbourStripeLimitsX.push_back(std::make_pair(-5, 45)); // 1. eintrag muss null sein, da sonst kaum events
+		neighbourStripeLimitsX.push_back(std::make_pair(-5, 45));
 
 		neighbourStripeLimitsY.push_back(std::make_pair(30, 100));
 		neighbourStripeLimitsY.push_back(std::make_pair(10, 90));

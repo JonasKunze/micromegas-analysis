@@ -13,7 +13,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
@@ -52,7 +52,7 @@ map<string, TH1F*> general_mapCombined1D;
 map<string, TH2F*> global_mapCombined2D;
 
 Double_t m_TotalEventNumber;
-vector<double> eventTimes(700000);
+vector<double> eventTimes;
 
 //structure for trees
 struct gauss_t {
@@ -189,7 +189,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	general_mapCombined1D["chargexAllEventsUncut"]->Fill(event->maxChargeX);
 	general_mapCombined1D["chargeyAllEventsUncut"]->Fill(event->maxChargeY);
 
-	general_mapCombined1D["timeDistributionUncut"]->Fill(
+	general_mapCombined1D["timeDistributionUncutX"]->Fill(
+			event->timeSliceOfMaxChargeX);
+	general_mapCombined1D["timeDistributionUncutY"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
 	// Charge cut
@@ -381,7 +383,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		delete fitHistoX;
 	}
 
-	general_mapCombined1D["timeDistribution"]->Fill(
+	general_mapCombined1D["timeDistributionX"]->Fill(
+			event->timeSliceOfMaxChargeX);
+	general_mapCombined1D["timeDistributionY"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
 	general_mapHist2D["mmhitmap"]->Fill(
@@ -517,11 +521,14 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	general_mapCombined1D["hitWidthY"] = new TH1F("hitWidthY",
 			";sigmaRunMittel ;entries", 50, 0, 3);
 
-	general_mapCombined1D["timeDistribution"] = new TH1F("timeDistribution",
+	general_mapCombined1D["timeDistributionX"] = new TH1F("timeDistributionX",
 			";time section ;entries", 27, -0.5, 26.5);
-	general_mapCombined1D["timeDistributionUncut"] = new TH1F(
-			"timeDistributionUncut", ";time section ;entries", 27, -0.5, 26.5);
-
+	general_mapCombined1D["timeDistributionY"] = new TH1F("timeDistributionY",
+			";time section ;entries", 27, -0.5, 26.5);
+	general_mapCombined1D["timeDistributionUncutX"] = new TH1F(
+			"timeDistributionUncutX", ";time section ;entries", 27, -0.5, 26.5);
+	general_mapCombined1D["timeDistributionUncutY"] = new TH1F(
+			"timeDistributionUncutY", ";time section ;entries", 27, -0.5, 26.5);
 //	general_mapCombined1D["clusterx"] = new TH1F("clusterx",
 //			";x cluster size [strips]; entries", 30, 0, 30.);
 //	general_mapCombined1D["clustery"] = new TH1F("clustery",
@@ -539,14 +546,14 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	/*
 	 * Data for graphs to plot the fit width vs the value of VD for every run
 	 */
-	std::vector<double> VDsForGraphsX(5);
-	std::vector<double> VAsForGraphsX(3);
-	std::vector<double> hitWidthsX(5);
-	std::vector<double> hitWidthsXErrors(5);
-	std::vector<double> VDsForGraphsY(5);
-	std::vector<double> VAsForGraphsY(3);
-	std::vector<double> hitWidthsY(5);
-	std::vector<double> hitWidthsYErrors(5);
+	std::vector<double> VDsForGraphsX;
+	std::vector<double> VAsForGraphsX;
+	std::vector<double> hitWidthsX;
+	std::vector<double> hitWidthsXErrors;
+	std::vector<double> VDsForGraphsY;
+	std::vector<double> VAsForGraphsY;
+	std::vector<double> hitWidthsY;
+	std::vector<double> hitWidthsYErrors;
 
 // iterate of different runs in the map
 	int runNumber = 0;
@@ -886,7 +893,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	/*
 	 * Fit and write the graphs
 	 */
-
 	fileCombined->mkdir("Graphs");
 	fileCombined->cd("Graphs");
 	std::set<int> allVAs, allVDs; // TreeSet to make every entry stored only once

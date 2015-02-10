@@ -253,6 +253,7 @@ public:
 		bool absolutePositionCut = false;
 		bool proportionCut = false;
 		std::stringstream msg;
+		msg.str("");
 		const int maxDistance = proportionLimits.size();
 		for (int deltaStrip = -maxDistance; deltaStrip <= maxDistance;
 				deltaStrip++) {
