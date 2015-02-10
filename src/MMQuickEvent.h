@@ -212,7 +212,6 @@ public:
 		std::sort(stripAndChargeAtMaxChargeTimeY.begin(),
 				stripAndChargeAtMaxChargeTimeY.end(),
 				sort_pair_first<unsigned int, short>());
-
 		/*
 		 * Now the array is sorted, the position of the maximal charge strip is unknown -> search for it again
 		 */
@@ -228,7 +227,7 @@ public:
 		}
 
 		const unsigned int numberOfYStrips =
-				stripAndChargeAtMaxChargeTimeX.size();
+				stripAndChargeAtMaxChargeTimeY.size();
 		for (positionOfMaxChargeInCrossSectionY = 0;
 				positionOfMaxChargeInCrossSectionY != numberOfYStrips;
 				positionOfMaxChargeInCrossSectionY++) {
@@ -308,7 +307,6 @@ public:
 				absolutePositionCut = true;
 			} else if (!stripChargeIsStored && lowerLimitIsLargerZero) {
 				proportionCut = true;
-				msg << "!!!";
 			} else {
 				if (stripChargeIsStored) {
 					proportion =
