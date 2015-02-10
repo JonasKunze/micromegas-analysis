@@ -12,8 +12,8 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 10000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 2
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 20000
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
  * Cuts
@@ -22,10 +22,10 @@
 #define MIN_CHARGE_X 10
 #define MIN_CHARGE_Y 30
 
-#define MIN_CLUSTER_X 2
-#define MAX_CLUSTER_X 8
-#define MIN_CLUSTER_Y 2
-#define MAX_CLUSTER_Y 25
+//#define MIN_CLUSTER_X 2
+//#define MAX_CLUSTER_X 8
+//#define MIN_CLUSTER_Y 2
+//#define MAX_CLUSTER_Y 25
 
 //#define MIN_CHARGE_X 0
 //#define MIN_CHARGE_Y 0
@@ -87,7 +87,7 @@ maxi_t maxi;
 
 CutStatistic chargeCuts("achargeCuts");
 CutStatistic timingCuts("batimingCuts");
-CutStatistic clusterCuts("bbclusterCuts");
+//CutStatistic clusterCuts("bbclusterCuts");
 CutStatistic timeCoincidenceCuts("ctimeCoincidenceCuts");
 CutStatistic absolutePositionXCuts("dabsolutePositionXCuts");
 CutStatistic proportionXCuts("fproportionXCuts");
@@ -213,33 +213,32 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	/*
 	 * Calculate cluster sizes
 	 */
-	event->generateFixedTimeCrossSections();
-
-	int clusterSizeX = event->calculateClusterSize(
-			event->stripAndChargeAtMaxChargeTimeX,
-			event->positionOfMaxChargeInCrossSectionX);
-
-	int clusterSizeY = event->calculateClusterSize(
-			event->stripAndChargeAtMaxChargeTimeY,
-			event->positionOfMaxChargeInCrossSectionY);
-
-	general_mapHist1D["mmclusterxUncut"]->Fill(clusterSizeX);
-	general_mapHist1D["mmclusteryUncut"]->Fill(clusterSizeY);
-
-	general_mapCombined1D["clusterxUncut"]->Fill(clusterSizeX);
-	general_mapCombined1D["clusteryUncut"]->Fill(clusterSizeY);
-
-	// Cluster cut
-	if (clusterSizeX < MIN_CLUSTER_X || clusterSizeY < MIN_CLUSTER_Y
-			|| clusterSizeX > MAX_CLUSTER_X || clusterSizeY > MAX_CLUSTER_Y) {
-		std::stringstream suffix;
-		suffix << clusterSizeX << "-" << clusterSizeY;
-		clusterCuts.Fill(1, event, suffix.str());
-		return false;
-	} else {
-		clusterCuts.Fill(0, event);
-	}
-
+//	event->generateFixedTimeCrossSections();
+//
+//	int clusterSizeX = event->calculateClusterSize(
+//			event->stripAndChargeAtMaxChargeTimeX,
+//			event->positionOfMaxChargeInCrossSectionX);
+//
+//	int clusterSizeY = event->calculateClusterSize(
+//			event->stripAndChargeAtMaxChargeTimeY,
+//			event->positionOfMaxChargeInCrossSectionY);
+//
+//	general_mapHist1D["mmclusterxUncut"]->Fill(clusterSizeX);
+//	general_mapHist1D["mmclusteryUncut"]->Fill(clusterSizeY);
+//
+//	general_mapCombined1D["clusterxUncut"]->Fill(clusterSizeX);
+//	general_mapCombined1D["clusteryUncut"]->Fill(clusterSizeY);
+//
+//	// Cluster cut
+//	if (clusterSizeX < MIN_CLUSTER_X || clusterSizeY < MIN_CLUSTER_Y
+//			|| clusterSizeX > MAX_CLUSTER_X || clusterSizeY > MAX_CLUSTER_Y) {
+//		std::stringstream suffix;
+//		suffix << clusterSizeX << "-" << clusterSizeY;
+//		clusterCuts.Fill(1, event, suffix.str());
+//		return false;
+//	} else {
+//		clusterCuts.Fill(0, event);
+//	}
 	// coincidence check
 	if (abs(
 			event->timeSliceOfMaxChargeX
@@ -254,6 +253,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 * 4. Gaussian fits to charge distribution over strips at timestep with maximum charge
 	 */
 
+	event->generateFixedTimeCrossSections();
 	// Proportion cuts
 	bool acceptEventX = event->runProportionCut(
 			general_mapCombined["mmhitneighboursX"],
@@ -399,11 +399,11 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	general_mapHist1D["mmhity"]->Fill(
 			/*strip y with maximum charge*/stripNumShowingSignal[event->stripWithMaxChargeY]);
 
-	general_mapHist1D["mmclusterx"]->Fill(clusterSizeX);
-	general_mapHist1D["mmclustery"]->Fill(clusterSizeY);
-
-	general_mapCombined1D["clusterx"]->Fill(clusterSizeX);
-	general_mapCombined1D["clustery"]->Fill(clusterSizeY);
+//	general_mapHist1D["mmclusterx"]->Fill(clusterSizeX);
+//	general_mapHist1D["mmclustery"]->Fill(clusterSizeY);
+//
+//	general_mapCombined1D["clusterx"]->Fill(clusterSizeX);
+//	general_mapCombined1D["clustery"]->Fill(clusterSizeY);
 
 	general_mapHist1D["mmtimex"]->Fill(
 	/*time of maximum charge x*/event->timeSliceOfMaxChargeX * 25);
@@ -413,53 +413,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	eventTimes.push_back(
 			(double) event->time_s + (double) event->time_us / 1e6);
 	return true;
-}
-
-/*
- * xValues, hitWidhts, hitWidthErrors and parameters must all have the same number of values
- *
- * (xValues[i]+-1, hitWidths[i]+-hitWidthErros[i]) will be plotted for all i with parameters[i]==parameterValue
- */
-void plotHitWidthGraph(std::string name, std::string xTitle,
-		std::vector<double> xValues, std::vector<double> hitWidths,
-		std::vector<double> hitWidthErrors, std::vector<double> parameters,
-		double parameterValue, double driftGap) {
-
-	gStyle->SetStatW(0.2);
-
-	std::vector<double> xValuesFiltered;
-	std::vector<double> yValuesFiltered;
-	std::vector<double> yValueErrorsFiltered;
-	for (unsigned int i = 0; i < xValues.size(); i++) {
-		if (parameters[i] == parameterValue) {
-			xValuesFiltered.push_back(xValues[i]);
-			yValuesFiltered.push_back(hitWidths[i]);
-			yValueErrorsFiltered.push_back(hitWidthErrors[i]);
-		}
-	}
-
-	double vErrors[xValuesFiltered.size()];
-	for (unsigned int i = 0; i < xValuesFiltered.size(); i++) {
-		vErrors[i] = 1;
-	}
-
-	TGraphErrors hitWidthVsV(xValuesFiltered.size(), &xValuesFiltered[0],
-			&yValuesFiltered[0], vErrors, &yValueErrorsFiltered[0]);
-	hitWidthVsV.SetTitle(name.c_str());
-	hitWidthVsV.SetName(hitWidthVsV.GetTitle());
-	hitWidthVsV.GetXaxis()->SetTitle(xTitle.c_str());
-	hitWidthVsV.GetYaxis()->SetTitle("average hit width [strips]");
-	hitWidthVsV.SetDrawOption("AP");
-	hitWidthVsV.SetMarkerColor(4);
-	hitWidthVsV.SetMarkerStyle(21);
-
-	hitWidthVsV.Fit("pol1", "q");
-	hitWidthVsV.Write(hitWidthVsV.GetTitle());
-
-	std::stringstream subfolder;
-	subfolder << driftGap;
-
-	writeToPdf<TGraph>(&hitWidthVsV, subfolder.str(), "AP");
 }
 
 // Main Program
@@ -489,8 +442,9 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	std::cout << combinedFileName.str() << std::endl;
 	TFile* fileCombined = new TFile(combinedFileName.str().c_str(),
 			(Option_t*) "RECREATE");
-	general_mapCombined["rate"] = new TH2F("rate", ";VDrift [V];VAmp [V];rate [Hz]",
-			numberOfXBins, firstXBinValue, lastXBinValue,
+	general_mapCombined["rate"] = new TH2F("rate",
+			";VDrift [V];VAmp [V];rate [Hz]", numberOfXBins, firstXBinValue,
+			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
@@ -500,22 +454,25 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
-	general_mapCombined["chargeY"] = new TH2F("chargeY", ";VDrift [V];VAmp [V];Charge",
-			numberOfXBins, firstXBinValue, lastXBinValue,
+	general_mapCombined["chargeY"] = new TH2F("chargeY",
+			";VDrift [V];VAmp [V];Charge", numberOfXBins, firstXBinValue,
+			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["chargeXfieldStrength"] = new TH2F(
-			"chargeXfieldStrength", ";Drift field strength [kV/m] ;VAmp [V];Charge",
-			numberOfXBins, firstXBinValue / MicroMegas.driftGap,
+			"chargeXfieldStrength",
+			";Drift field strength [kV/m] ;VAmp [V];Charge", numberOfXBins,
+			firstXBinValue / MicroMegas.driftGap,
 			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeYfieldStrength"] = new TH2F(
-			"chargeYfieldStrength", ";Drift field strength [kV/m] ;VAmp [V];Charge",
-			numberOfXBins, firstXBinValue / MicroMegas.driftGap,
+			"chargeYfieldStrength",
+			";Drift field strength [kV/m] ;VAmp [V];Charge", numberOfXBins,
+			firstXBinValue / MicroMegas.driftGap,
 			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
@@ -535,12 +492,12 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["mmhitneighboursX"] = new TH2F("mmhitneighboursX",
-			";distance [strips]; relative charge [% of max];Count", 21, -10, 10, 21,
-			0, 100);
+			";distance [strips]; relative charge [% of max];Count", 21, -10, 10,
+			21, 0, 100);
 
 	general_mapCombined["mmhitneighboursY"] = new TH2F("mmhitneighboursY",
-			";distance [strips]; relative charge [% of max];Count", 21, -10, 10, 21,
-			0, 100);
+			";distance [strips]; relative charge [% of max];Count", 21, -10, 10,
+			21, 0, 100);
 
 	general_mapCombined1D["chargexAllEvents"] = new TH1F("chargexAllEvents",
 			";charge X; entries", 100, 0, 1000);
@@ -561,14 +518,14 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	general_mapCombined1D["timeDistributionUncut"] = new TH1F(
 			"timeDistributionUncut", ";time section ;entries", 27, -0.5, 26.5);
 
-	general_mapCombined1D["clusterx"] = new TH1F("clusterx",
-			";x cluster size [strips]; entries", 30, 0, 30.);
-	general_mapCombined1D["clustery"] = new TH1F("clustery",
-			";y cluster size [strips]; entries", 30, 0, 30.);
-	general_mapCombined1D["clusterxUncut"] = new TH1F("clusterxUncut",
-			";x cluster size [strips]; entries", 30, 0, 30.);
-	general_mapCombined1D["clusteryUncut"] = new TH1F("clusteryUncut",
-			";y cluster size [strips]; entries", 30, 0, 30.);
+//	general_mapCombined1D["clusterx"] = new TH1F("clusterx",
+//			";x cluster size [strips]; entries", 30, 0, 30.);
+//	general_mapCombined1D["clustery"] = new TH1F("clustery",
+//			";y cluster size [strips]; entries", 30, 0, 30.);
+//	general_mapCombined1D["clusterxUncut"] = new TH1F("clusterxUncut",
+//			";x cluster size [strips]; entries", 30, 0, 30.);
+//	general_mapCombined1D["clusteryUncut"] = new TH1F("clusteryUncut",
+//			";y cluster size [strips]; entries", 30, 0, 30.);
 
 	int numberOfRunsToProcess = mapFile.size();
 	if (MAX_NUM_OF_RUNS_TO_BE_PROCESSED < numberOfRunsToProcess
@@ -606,14 +563,14 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				xStrips, 0, xStrips);
 		general_mapHist1D["mmhity"] = new TH1F("mmhity", ";y [strips]; entries",
 				yStrips, 0, yStrips);
-		general_mapHist1D["mmclusterx"] = new TH1F("mmclusterx",
-				";x cluster size [strips]; entries", 50, 0, 50.);
-		general_mapHist1D["mmclustery"] = new TH1F("mmclustery",
-				";y cluster size [strips]; entries", 50, 0, 50.);
-		general_mapHist1D["mmclusterxUncut"] = new TH1F("mmclusterxUncut",
-				";x cluster size [strips]; entries", 50, 0, 50.);
-		general_mapHist1D["mmclusteryUncut"] = new TH1F("mmclusteryUncut",
-				";y cluster size [strips]; entries", 50, 0, 50.);
+//		general_mapHist1D["mmclusterx"] = new TH1F("mmclusterx",
+//				";x cluster size [strips]; entries", 50, 0, 50.);
+//		general_mapHist1D["mmclustery"] = new TH1F("mmclustery",
+//				";y cluster size [strips]; entries", 50, 0, 50.);
+//		general_mapHist1D["mmclusterxUncut"] = new TH1F("mmclusterxUncut",
+//				";x cluster size [strips]; entries", 50, 0, 50.);
+//		general_mapHist1D["mmclusteryUncut"] = new TH1F("mmclusteryUncut",
+//				";y cluster size [strips]; entries", 50, 0, 50.);
 		general_mapHist1D["mmchargex"] = new TH1F("mmchargex",
 				";charge X; entries", 100, 0, 1000);
 		general_mapHist1D["mmchargey"] = new TH1F("mmchargey",
@@ -928,22 +885,26 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		std::stringstream name;
 		name << "hitWidthVsVDX-VA" << VA;
 		plotHitWidthGraph(name.str(), "VD [V]", VDsForGraphsX, hitWidthsX,
-				hitWidthsXErrors, VAsForGraphsX, VA, MicroMegas.driftGap);
+				hitWidthsXErrors, VAsForGraphsX, VA, MicroMegas.driftGap,
+				VDsForGraphsX[0] -1, 2000); // Skip first bin as it's bad!
 		name.str("");
 		name << "hitWidthVsVDY-VA" << VA;
 		plotHitWidthGraph(name.str(), "VD [V]", VDsForGraphsY, hitWidthsY,
-				hitWidthsYErrors, VAsForGraphsY, VA, MicroMegas.driftGap);
+				hitWidthsYErrors, VAsForGraphsY, VA, MicroMegas.driftGap,
+				VDsForGraphsX[0] -1, 2000);// Skip first bin as it's bad!
 	}
 
 	for (int VD : allVDs) {
 		std::stringstream name;
 		name << "hitWidthVsVAX-VD" << VD;
 		plotHitWidthGraph(name.str(), "VA [V]", VAsForGraphsX, hitWidthsX,
-				hitWidthsXErrors, VDsForGraphsX, VD, MicroMegas.driftGap);
+				hitWidthsXErrors, VDsForGraphsX, VD, MicroMegas.driftGap,VAsForGraphsX[0],
+				1000);
 		name.str("");
 		name << "hitWidthVsVAY-VD" << VD;
 		plotHitWidthGraph(name.str(), "VA [V]", VAsForGraphsY, hitWidthsY,
-				hitWidthsYErrors, VDsForGraphsY, VD, MicroMegas.driftGap);
+				hitWidthsYErrors, VDsForGraphsY, VD, MicroMegas.driftGap, 0,
+				1000);
 	}
 
 	fileCombined->Close();
@@ -974,12 +935,12 @@ int main(int argc, char *argv[]) {
 			";VD [V]; VA [V];Hit width [strips]", (1250 - 50) / 50, 0, 1250, 3,
 			488, 563);
 	global_mapCombined2D["hitWidthYByVAVDCounter"] = new TH2F(
-			"hitWidthYByVAVDCounter", ";VD [V]; VA [V]; Counts", (1250 - 50) / 50, 0,
-			1250, 3, 488, 563);
+			"hitWidthYByVAVDCounter", ";VD [V]; VA [V]; Counts",
+			(1250 - 50) / 50, 0, 1250, 3, 488, 563);
 
 	global_mapCombined2D["RateByVAVD"] = new TH2F("RateByVAVD",
-			";VD [V]; VA [V];Hit width [strips];Rate [Hz]", (1250 - 50) / 50, 0, 1250, 3,
-			488, 563);
+			";VD [V]; VA [V];Rate [Hz]", (1250 - 50) / 50, 0, 1250, 3, 488,
+			563);
 	global_mapCombined2D["RateByVAVDCounter"] = new TH2F("RateByVAVDCounter",
 			";VD [V]; VA [V];Counts", (1250 - 50) / 50, 0, 1250, 3, 488, 563);
 
@@ -1021,27 +982,12 @@ int main(int argc, char *argv[]) {
 			(Option_t*) "RECREATE");
 
 	fileCombined->cd();
-	TGraphErrors hitWidthVsDriftGapX(driftGaps.size(), &driftGaps[0],
-			&averageHitwidthsX[0], &driftGapErrors[0],
-			&averageHitwidthsXError[0]);
-	hitWidthVsDriftGapX.SetName("hitWidthVsDriftGapX");
-	hitWidthVsDriftGapX.GetXaxis()->SetTitle("driftGap [mm]");
-	hitWidthVsDriftGapX.GetYaxis()->SetTitle("average hit width [strips]");
-	hitWidthVsDriftGapX.Fit("pol1", "q");
-	hitWidthVsDriftGapX.Write("hitWidthVsDriftGapX");
 
-	writeToPdf<TGraph>(&hitWidthVsDriftGapX, "results", "AP");
+	plotHitGraphGraph("hitWidthVsDriftGapX", "DriftGap [mm]", driftGaps, 1,
+			averageHitwidthsX, driftGapErrors, "results", 0, 100);
 
-	TGraphErrors hitWidthVsDriftGapY(driftGaps.size(), &driftGaps[0],
-			&averageHitwidthsY[0], &driftGapErrors[0],
-			&averageHitwidthsYError[0]);
-	hitWidthVsDriftGapY.SetName("hitWidthVsDriftGapY");
-	hitWidthVsDriftGapY.GetXaxis()->SetTitle("driftGap [mm]");
-	hitWidthVsDriftGapY.GetYaxis()->SetTitle("average hit width [strips]");
-	hitWidthVsDriftGapY.Fit("pol1", "q");
-	hitWidthVsDriftGapY.Write("hitWidthVsDriftGapY");
-
-	writeToPdf<TGraph>(&hitWidthVsDriftGapY, "results", "AP");
+	plotHitGraphGraph("hitWidthVsDriftGapY", "DriftGap [mm]", driftGaps, 1,
+			averageHitwidthsY, driftGapErrors, "results", 0, 100);
 
 	fileCombined->cd();
 	gStyle->SetOptStat(0);

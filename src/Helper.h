@@ -58,4 +58,20 @@ void writeToPdf(T* object, std::string subfolder, std::string drawOptions) {
 }
 void writeTH2FToPdf(TH2F* object, std::string subfolder,
 		std::string drawOptions);
+
+/*
+ * xValues, hitWidhts, hitWidthErrors and parameters must all have the same number of values
+ *
+ * (xValues[i]+-1, hitWidths[i]+-hitWidthErros[i]) will be plotted for all i with parameters[i]==parameterValue
+ */
+void plotHitWidthGraph(std::string name, std::string xTitle,
+		std::vector<double> xValues, std::vector<double> hitWidths,
+		std::vector<double> hitWidthErrors, std::vector<double> parameters,
+		double parameterValue, double driftGap, double fitRangeStart, double fitRangeEnd);
+
+void plotHitGraphGraph(std::string name, std::string xTitle,
+		std::vector<double> xValues, double xError, std::vector<double> yValues,
+		std::vector<double> yErrors, std::string subdir, double fitRangeStart, double fitRangeEnd);
+
+
 #endif
