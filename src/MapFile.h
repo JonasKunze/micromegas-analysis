@@ -337,15 +337,6 @@ private:
 			ampEnd = 550;
 			ampSteps = 25;
 
-//			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
-//			neighbourStripeLimitsX.push_back(std::make_pair(5, 70));
-//			neighbourStripeLimitsX.push_back(std::make_pair(0, 35));
-
-//			neighbourStripeLimitsY.push_back(std::make_pair(40, 100));
-//			neighbourStripeLimitsY.push_back(std::make_pair(10, 70));
-//			neighbourStripeLimitsY.push_back(std::make_pair(1, 40));
-//			neighbourStripeLimitsY.push_back(std::make_pair(0, 30));
-
 			m_mapFile["VD222VA525-run528"] = new TFile(
 					(path + appendName + "_VD222VA525-run528.root").c_str(),
 					(Option_t*) "RECREATE");

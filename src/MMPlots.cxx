@@ -13,8 +13,8 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED 1000
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 2
+#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
  * Cuts
@@ -691,7 +691,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				general_mapCombined1D["hitWidthY"], VDsForGraphsY,
 				VAsForGraphsY, hitWidthsY, hitWidthsYErrors, VD, VA);
 
-		if (hitWidthFitResultsY) {
+		if (hitWidthFitResultsY && hitWidthFitResultsY->GetNpar()>0) {
 			global_mapCombined2D["hitWidthYByVAVD"]->Fill(VD, VA,
 					hitWidthFitResultsY->GetParameter(1));
 
@@ -981,12 +981,7 @@ void calculateAveragesFromTH2F(TH2F* histo, TH2F* histoCounter) {
 	delete histoCounter;
 }
 
-// Main Program
-int main(int argc, char *argv[]) {
-	std::stringstream mkdir;
-	mkdir << "mkdir -p " << outPath;
-	system(mkdir.str().c_str());
-
+void initialize(){
 	global_mapCombined2D["rateVsDriftGap"] = new TH2F("rateVsDriftGap",
 			";Drift gap [mm]; Rate [Hz]; Counts", 24, 4, 16, 20, 0, 500);
 
@@ -1002,6 +997,14 @@ int main(int argc, char *argv[]) {
 			563);
 	global_mapCombined2D["RateByVAVDCounter"] = new TH2F("RateByVAVDCounter",
 			";VD [V]; VA [V];Counts", (1250 - 50) / 50, 0, 1250, 3, 488, 563);
+}
+// Main Program
+int main(int argc, char *argv[]) {
+	std::stringstream mkdir;
+	mkdir << "mkdir -p " << outPath;
+	system(mkdir.str().c_str());
+
+	initialize();
 
 	/*
 	 * Set default style options
@@ -1060,6 +1063,13 @@ int main(int argc, char *argv[]) {
 
 		delete pair.second;
 	}
-
 	fileCombined->Close();
+
+	/*
+	 * Duck run
+	 */
+	initialize();
+	MapFile MicroMegas(inPath, outPath, appendName, -1);
+	readFiles(MicroMegas, averageHitwidthsX, averageHitwidthsY,
+			averageHitwidthsXError, averageHitwidthsYError);
 }

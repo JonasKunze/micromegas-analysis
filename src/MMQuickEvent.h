@@ -270,8 +270,7 @@ public:
 		 */
 		bool absolutePositionCut = false;
 		bool proportionCut = false;
-		std::stringstream msg;
-		msg.str("");
+
 		const int maxDistance = proportionLimits.size();
 		for (int deltaStrip = -maxDistance; deltaStrip <= maxDistance;
 				deltaStrip++) {
@@ -319,7 +318,6 @@ public:
 							|| proportion
 									> proportionLimits[abs(deltaStrip) - 1].second) {
 						proportionCut = true;
-						msg << "_" << deltaStrip << "=" << proportion;
 					}
 				}
 			}
@@ -337,9 +335,9 @@ public:
 				absolutePositionCuts.Fill(0, this);
 
 				if (proportionCut) {
-					proportionCuts.Fill(1, this, msg.str());
+					proportionCuts.Fill(1, this);
 				} else {
-					proportionCuts.Fill(0, this, msg.str());
+					proportionCuts.Fill(0, this);
 				}
 			}
 		}
