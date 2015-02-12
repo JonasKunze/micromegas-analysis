@@ -13,8 +13,8 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 20000;
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 3
+int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = -1;
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
  * Cuts
@@ -1104,11 +1104,11 @@ int main(int argc, char *argv[]) {
 
 	fileCombined->cd();
 
-	plotGraph("hitWidthVsDriftGapX", "DriftGap [mm]", driftGaps, 1,
-			averageHitwidthsX, driftGapErrors, "results", 0, 100);
+	plotGraph("hitWidthVsDriftGapX", "DriftGap [mm]", driftGaps, 0.1,
+			averageHitwidthsX, averageHitwidthsXError, "results", 0, 100);
 
-	plotGraph("hitWidthVsDriftGapY", "DriftGap [mm]", driftGaps, 1,
-			averageHitwidthsY, driftGapErrors, "results", 0, 100);
+	plotGraph("hitWidthVsDriftGapY", "DriftGap [mm]", driftGaps, 0.1,
+			averageHitwidthsY, averageHitwidthsYError, "results", 0, 100);
 
 	fileCombined->cd();
 	gStyle->SetOptStat(0);
