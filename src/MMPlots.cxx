@@ -13,7 +13,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 20000;
+int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = -1;
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
@@ -127,8 +127,8 @@ TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		// Plot hit width vs VD
 		VDsForGraphs.push_back(VD);
 		VAsForGraphs.push_back(VA);
-		hitWidthForGraphs.push_back(widthHistFitResult->GetParameter(1));
-		hitWidthForGraphsError.push_back(widthHistFitResult->GetParameter(2));
+		hitWidthForGraphs.push_back(mmhitWidthHisto->GetMean()); // µ is the '
+		hitWidthForGraphsError.push_back(mmhitWidthHisto->GetMeanError());
 	}
 
 	return widthHistFitResult;
