@@ -13,15 +13,15 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-#define MAX_NUM_OF_EVENTS_TO_BE_PROCESSED -1
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
+int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 20000;
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 3
 
 /*
  * Cuts
  */
 // Minimal charge required for the strip with maximum charge
-#define MIN_CHARGE_X 10
-#define MIN_CHARGE_Y 30
+#define MIN_CHARGE_X 60
+#define MIN_CHARGE_Y 120
 
 //#define MIN_CLUSTER_X 2
 //#define MAX_CLUSTER_X 8
@@ -33,7 +33,8 @@
 
 #define MIN_TIMESLICE 2
 #define MAX_TIMESLICE 24
-#define MAX_XY_TIME_DIFFERENCE 1
+#define MAX_XY_TIME_DIFFERENCE 2
+#define MIN_XY_TIME_DIFFERENCE -1
 
 #define FIT_RANGE 20
 #define MAX_FIT_MEAN_DISTANCE_TO_MAX 2 // Number of strips
@@ -86,16 +87,18 @@ struct maxi_t {
 gauss_t gauss;
 maxi_t maxi;
 
-CutStatistic chargeCuts("achargeCuts");
-CutStatistic timingCuts("batimingCuts");
-//CutStatistic clusterCuts("bbclusterCuts");
-CutStatistic timeCoincidenceCuts("ctimeCoincidenceCuts");
-CutStatistic absolutePositionXCuts("dabsolutePositionXCuts");
-CutStatistic proportionXCuts("fproportionXCuts");
-CutStatistic absolutePositionYCuts("eabsolutePositionYCuts");
-CutStatistic proportionYCuts("gproportionYCuts");
-CutStatistic fitProblemCuts("hfitProblemCuts");
-CutStatistic fitMeanMaxChargeDistanceCuts("ifitMeanMaxChargeDistanceCuts");
+CutStatistic nocut_EventsWithSmallCharge("nocut_smallChargeEvents");
+
+CutStatistic chargeCuts("a_chargeCuts");
+CutStatistic timingCuts("ba_timingCuts");
+//CutStatistic clusterCuts("bb_clusterCuts");
+CutStatistic timeCoincidenceCuts("c_timeCoincidenceCuts");
+CutStatistic absolutePositionXCuts("d_absolutePositionXCuts");
+CutStatistic absolutePositionYCuts("e_absolutePositionYCuts");
+CutStatistic proportionXCuts("f_proportionXCuts");
+CutStatistic proportionYCuts("g_proportionYCuts");
+CutStatistic fitProblemCuts("h_fitProblemCuts");
+CutStatistic fitMeanMaxChargeDistanceCuts("i_fitMeanMaxChargeDistanceCuts");
 
 /**
  * Returns true for every Nth eventNumber so that about totalStores times true is returned for any number of events
@@ -116,7 +119,7 @@ TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		std::vector<double>& hitWidthForGraphs,
 		std::vector<double>& hitWidthForVDError, int VD, int VA) {
 
-	// fit histrogram maxChargeDistribution with Gaussian distribution
+	// fit histrogram maxChargeCrossSection with Gaussian distribution
 	mmhitWidthHisto->Fit("gaus", "Sq");
 	TF1* widthHistFitResult = mmhitWidthHisto->GetFunction("gaus");
 	if (widthHistFitResult) {
@@ -125,14 +128,15 @@ TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		VDsForGraphs.push_back(VD);
 		VAsForGraphs.push_back(VA);
 		hitWidthForGraphs.push_back(widthHistFitResult->GetParameter(1));
-		hitWidthForVDError.push_back(widthHistFitResult->GetParError(1));
+		hitWidthForVDError.push_back(widthHistFitResult->GetParError(2));
 	}
+
 	return widthHistFitResult;
 }
 
 TF1* fitGauss(
 		vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimes,
-		int eventNumber, std::string name, TH1F* &maxChargeDistribution,
+		int eventNumber, std::string name, TH1F* &maxChargeCrossSection,
 		unsigned int startFitRange, unsigned int endFitRange) {
 	// Generate the title of the histogram
 	stringstream histoName;
@@ -144,11 +148,11 @@ TF1* fitGauss(
 		return NULL;
 	}
 
-	maxChargeDistribution = new TH1F(histoName.str().c_str(), "; strip; charge",
+	maxChargeCrossSection = new TH1F(histoName.str().c_str(), "; strip; charge",
 			endFitRange - startFitRange + 2, startFitRange, endFitRange);
 
 	// No idea why...but this needs to be done...Damn root
-//	maxChargeDistribution->SetDirectory(0);
+//	maxChargeCrossSection->SetDirectory(0);
 //	TH1::AddDirectory(kFALSE);
 
 	// Fill the histogram
@@ -156,7 +160,7 @@ TF1* fitGauss(
 			strip++) {
 		if (stripAndChargeAtMaxChargeTimes[strip].first >= startFitRange
 				&& stripAndChargeAtMaxChargeTimes[strip].first <= endFitRange) {
-			maxChargeDistribution->SetBinContent(
+			maxChargeCrossSection->SetBinContent(
 					stripAndChargeAtMaxChargeTimes[strip].first - startFitRange
 							+ 1 /* Bin 0 is underflow bin => +1 */,
 					stripAndChargeAtMaxChargeTimes[strip].second);
@@ -164,10 +168,10 @@ TF1* fitGauss(
 	}
 
 // fit histrogram maxChargeDistribution with Gaussian distribution
-	maxChargeDistribution->Fit("gaus", "Sq", NULL, startFitRange, endFitRange);
+	maxChargeCrossSection->Fit("gaus", "Sq", NULL, startFitRange, endFitRange);
 
 // return result of Gaussian fit
-	return maxChargeDistribution->GetFunction("gaus");
+	return maxChargeCrossSection->GetFunction("gaus");
 }
 
 // analysis of single event: characteristics of event and Gaussian fit
@@ -196,8 +200,18 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	general_mapCombined1D["timeDistributionUncutY"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
+	if (event->timeSliceOfMaxChargeX != -1
+			&& event->timeSliceOfMaxChargeY != -1) {
+		general_mapCombined1D["timeCoincidence"]->Fill(
+				event->timeSliceOfMaxChargeX - event->timeSliceOfMaxChargeY);
+	}
+
 	// Charge cut
 	if (event->maxChargeX < MIN_CHARGE_X || event->maxChargeY < MIN_CHARGE_Y) {
+		if (event->maxChargeX != -1&& event->maxChargeY != -1
+		&& event->maxChargeY < MIN_CHARGE_Y) {
+			nocut_EventsWithSmallCharge.Fill(0, event);
+		}
 		chargeCuts.Fill(1, event);
 		return false;
 	} else {
@@ -223,6 +237,10 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	} else {
 		timingCuts.Fill(0, event);
 	}
+	general_mapCombined1D["chargexAllEventsAfterTimingCut"]->Fill(
+			event->maxChargeX);
+	general_mapCombined1D["chargeyAllEventsAfterTimingCut"]->Fill(
+			event->maxChargeY);
 
 	/*
 	 * Calculate cluster sizes
@@ -254,14 +272,19 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 //		clusterCuts.Fill(0, event);
 //	}
 	// coincidence check
-	if (abs(
-			event->timeSliceOfMaxChargeX
-					- event->timeSliceOfMaxChargeY) > MAX_XY_TIME_DIFFERENCE) {
+	if (event->timeSliceOfMaxChargeX
+			- event->timeSliceOfMaxChargeY> MAX_XY_TIME_DIFFERENCE ||
+			event->timeSliceOfMaxChargeX - event->timeSliceOfMaxChargeY
+			< MIN_XY_TIME_DIFFERENCE) {
 		timeCoincidenceCuts.Fill(1, event);
 		return false;
 	} else {
 		timeCoincidenceCuts.Fill(0, event);
 	}
+	general_mapCombined1D["chargexAllEventsAfterCoincidenceCut"]->Fill(
+			event->maxChargeX);
+	general_mapCombined1D["chargeyAllEventsAfterCoincidenceCut"]->Fill(
+			event->maxChargeY);
 
 	/*
 	 * 4. Gaussian fits to charge distribution over strips at timestep with maximum charge
@@ -298,7 +321,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	int startFitRange = stripNumShowingSignal[event->stripWithMaxChargeX]
 			- FIT_RANGE / 2;
 	gaussFitX = fitGauss(event->stripAndChargeAtMaxChargeTimeX, eventNumber,
-			"maxChargeDistributionX", fitHistoX,
+			"maxChargeCrossSectionX", fitHistoX,
 			startFitRange > 0 ? startFitRange : 0,
 			stripNumShowingSignal[event->stripWithMaxChargeX] + FIT_RANGE / 2);
 
@@ -323,7 +346,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	}
 
 	gaussFitY = fitGauss(event->stripAndChargeAtMaxChargeTimeY, eventNumber,
-			"maxChargeDistributionY", fitHistoY,
+			"maxChargeCrossSectionY", fitHistoY,
 			stripNumShowingSignal[event->stripWithMaxChargeY] - FIT_RANGE / 2,
 			stripNumShowingSignal[event->stripWithMaxChargeY] + FIT_RANGE / 2);
 
@@ -398,9 +421,14 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	general_mapTree["fits"]->Fill();
 
-	if (storeHistogram(eventNumber, 20)) {
+	if (storeHistogram(eventNumber, 5)) {
 		general_mapPlotFit[std::string(fitHistoX->GetName())] = fitHistoX;
 		general_mapPlotFit[std::string(fitHistoY->GetName())] = fitHistoY;
+
+		std::stringstream namePrefix;
+		namePrefix << "DG"<<MapFile::driftGap<<"_";
+		writeToPdf<TH1F>(fitHistoX, "HitWidthFits", "", namePrefix.str());
+		writeToPdf<TH1F>(fitHistoY, "HitWidthFits", "", namePrefix.str());
 	} else {
 		delete fitHistoY;
 		delete fitHistoX;
@@ -530,6 +558,18 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			";charge X; entries", 100, 0, 1000);
 	general_mapCombined1D["chargeyAllEvents"] = new TH1F("chargeyAllEvents",
 			";charge Y; entries", 100, 0, 1000);
+	general_mapCombined1D["chargexAllEventsAfterTimingCut"] = new TH1F(
+			"chargexAllEventsAfterTimingCut", ";charge X; entries", 100, 0,
+			1000);
+	general_mapCombined1D["chargeyAllEventsAfterTimingCut"] = new TH1F(
+			"chargeyAllEventsAfterTimingCut", ";charge Y; entries", 100, 0,
+			1000);
+	general_mapCombined1D["chargexAllEventsAfterCoincidenceCut"] = new TH1F(
+			"chargexAllEventsAfterCoincidenceCut", ";charge X; entries", 100, 0,
+			1000);
+	general_mapCombined1D["chargeyAllEventsAfterCoincidenceCut"] = new TH1F(
+			"chargeyAllEventsAfterCoincidenceCut", ";charge Y; entries", 100, 0,
+			1000);
 	general_mapCombined1D["chargexAllEventsUncut"] = new TH1F(
 			"chargexAllEventsUncut", ";charge X; entries", 100, 0, 1000);
 	general_mapCombined1D["chargeyAllEventsUncut"] = new TH1F(
@@ -550,6 +590,10 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	general_mapCombined1D["timeDistributionUncutY"] = new TH1F(
 			"timeDistributionUncutY", ";time section ;entries",
 			NUMBER_OF_TIME_SLICES, -0.5, 26.5);
+
+	general_mapCombined1D["timeCoincidence"] = new TH1F("timeCoincidence",
+			";time x-y [25 ns] ;entries", 11, -5.5, 5.5);
+
 //	general_mapCombined1D["clusterx"] = new TH1F("clusterx",
 //			";x cluster size [strips]; entries", 30, 0, 30.);
 //	general_mapCombined1D["clustery"] = new TH1F("clustery",
@@ -691,7 +735,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				general_mapCombined1D["hitWidthY"], VDsForGraphsY,
 				VAsForGraphsY, hitWidthsY, hitWidthsYErrors, VD, VA);
 
-		if (hitWidthFitResultsY && hitWidthFitResultsY->GetNpar()>0) {
+		if (hitWidthFitResultsY && hitWidthFitResultsY->GetNpar() > 0) {
 			global_mapCombined2D["hitWidthYByVAVD"]->Fill(VD, VA,
 					hitWidthFitResultsY->GetParameter(1));
 
@@ -699,6 +743,15 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 					MicroMegas.getVDbyFileName(Fitr->first),
 					MicroMegas.getVAbyFileName(Fitr->first), 1);
 		}
+
+		/*
+		 * Store HitWidth histograms
+		 */
+		std::stringstream namePrefix;
+		namePrefix << "DG"<<MapFile::driftGap<<"_" << Fitr->first << "_";
+		writeToPdf<TH1F>(general_mapHist1D["mmhitWidthX"], "HitWidthHistograms", "", namePrefix.str());
+		writeToPdf<TH1F>(general_mapHist1D["mmhitWidthY"], "HitWidthHistograms", "", namePrefix.str());
+
 
 		float lengthOfMeasurement = 0.;
 		if (!eventTimes.empty()) {
@@ -854,7 +907,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		double accepted = histo.GetBinContent(1);
 		double cut = histo.GetBinContent(2);
 		std::cout << cutStat->getName() << "\t" << accepted << "\t" << cut
-				<< "\t" << cut / (accepted + cut) << std::endl;
+				<< "\t" << (100 * cut / (accepted + cut)) << std::endl;
 	}
 
 //save combined plots
@@ -981,7 +1034,7 @@ void calculateAveragesFromTH2F(TH2F* histo, TH2F* histoCounter) {
 	delete histoCounter;
 }
 
-void initialize(){
+void initialize() {
 	global_mapCombined2D["rateVsDriftGap"] = new TH2F("rateVsDriftGap",
 			";Drift gap [mm]; Rate [Hz]; Counts", 24, 4, 16, 20, 0, 500);
 
@@ -1000,6 +1053,10 @@ void initialize(){
 }
 // Main Program
 int main(int argc, char *argv[]) {
+	if (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED == -1) {
+		MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 1E6; // Reduce memory consumption
+	}
+
 	std::stringstream mkdir;
 	mkdir << "mkdir -p " << outPath;
 	system(mkdir.str().c_str());

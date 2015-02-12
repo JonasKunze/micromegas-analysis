@@ -24,7 +24,7 @@ const std::string appendName = "";				// Name of single measurements
 const std::string combinedPlotsFile = "combined.root";// Name of the file for the combined results of all runs (hier muss jeder Tag einzeln analysiert werden! Da Zeile 79-84(driftStart...ampSteps) für jeden Tag anders war.
 
 template<typename T>
-void writeToPdf(T* object, std::string subfolder, std::string drawOptions) {
+void writeToPdf(T* object, std::string subfolder, std::string drawOptions, std::string namePrefix="") {
 	gStyle->SetOptFit(1111);
 
 	std::string histoName(object->GetName());
@@ -48,7 +48,7 @@ void writeToPdf(T* object, std::string subfolder, std::string drawOptions) {
 	mkdir << "mkdir -p " << pdfName.str();
 	system(mkdir.str().c_str());
 
-	pdfName << object->GetName() << ".pdf";
+	pdfName << namePrefix << object->GetName() << ".pdf";
 
 	TCanvas canvas("c", "data", 200, 10, 700, 500);
 	canvas.SetLeftMargin(0.11);
