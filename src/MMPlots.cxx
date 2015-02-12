@@ -13,7 +13,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = -1;
+int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 20000;
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 /*
@@ -117,7 +117,7 @@ bool storeHistogram(int eventNumber, int totalStores) {
 TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		std::vector<double>& VDsForGraphs, std::vector<double>& VAsForGraphs,
 		std::vector<double>& hitWidthForGraphs,
-		std::vector<double>& hitWidthForVDError, int VD, int VA) {
+		std::vector<double>& hitWidthForGraphsError, int VD, int VA) {
 
 	// fit histrogram maxChargeCrossSection with Gaussian distribution
 	mmhitWidthHisto->Fit("gaus", "Sq");
@@ -128,7 +128,7 @@ TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		VDsForGraphs.push_back(VD);
 		VAsForGraphs.push_back(VA);
 		hitWidthForGraphs.push_back(widthHistFitResult->GetParameter(1));
-		hitWidthForVDError.push_back(widthHistFitResult->GetParError(2));
+		hitWidthForGraphsError.push_back(widthHistFitResult->GetParameter(2));
 	}
 
 	return widthHistFitResult;
