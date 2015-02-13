@@ -16,25 +16,27 @@
 
 using namespace std;
 
+#define RUN_WITH_HIGHES_VAVD false
+
 class MapFile {
 private:
 	static std::vector<std::pair<int, int> > neighbourStripeLimitsX;
 	static std::vector<std::pair<int, int> > neighbourStripeLimitsY;
 public:
 	//Voltage range, needed for initialization of combined histograms (hier die Schritte von VD und VA angeben (amp stimmt schon)
-	int driftStart;
-	int driftEnd;
-	int driftSteps;
-	int ampStart;
-	int ampEnd;
-	int ampSteps;
+	static int driftStart;
+	static int driftEnd;
+	static int driftSteps;
+	static int ampStart;
+	static int ampEnd;
+	static int ampSteps;
 
 	static std::vector<double> getAvailableDriftGaps() {
 		std::vector<double> gaps;
 		gaps.push_back(4.5);
 		gaps.push_back(8.0);
-		gaps.push_back(10.5);
-		gaps.push_back(15.5);
+//		gaps.push_back(10.5);
+//		gaps.push_back(15.5);
 //		gaps.push_back(-1);
 		return gaps;
 	}
@@ -144,9 +146,11 @@ private:
 			m_mapFile["VD275VA550"] = new TFile(
 					(path + appendName + "_VD275VA550.root").c_str(),
 					(Option_t*) "RECREATE");
-			m_mapFile["VD350VA550"] = new TFile(
-					(path + appendName + "_VD350VA550.root").c_str(),
-					(Option_t*) "RECREATE");
+			if (RUN_WITH_HIGHES_VAVD) {
+				m_mapFile["VD350VA550"] = new TFile(
+						(path + appendName + "_VD350VA550.root").c_str(),
+						(Option_t*) "RECREATE");
+			}
 		} else if (driftGap == 15.5) {
 // Zweiter Tag
 			driftStart = 172;
@@ -264,9 +268,11 @@ private:
 			m_mapFile["VD642VA550"] = new TFile(
 					(path + appendName + "_VD642VA550.root").c_str(),
 					(Option_t*) "RECREATE");
-			m_mapFile["VD817VA550"] = new TFile(
-					(path + appendName + "_VD817VA550.root").c_str(),
-					(Option_t*) "RECREATE");
+			if (RUN_WITH_HIGHES_VAVD) {
+				m_mapFile["VD817VA550"] = new TFile(
+						(path + appendName + "_VD817VA550.root").c_str(),
+						(Option_t*) "RECREATE");
+			}
 		} else if (driftGap == 8.0) {
 			driftStart = 89;
 			driftEnd = 622;
@@ -326,9 +332,11 @@ private:
 			m_mapFile["VD488VA550"] = new TFile(
 					(path + appendName + "_VD488VA550.root").c_str(),
 					(Option_t*) "RECREATE");
-			m_mapFile["VD622VA550"] = new TFile(
-					(path + appendName + "_VD622VA550.root").c_str(),
-					(Option_t*) "RECREATE");
+			if (RUN_WITH_HIGHES_VAVD) {
+				m_mapFile["VD622VA550"] = new TFile(
+						(path + appendName + "_VD622VA550.root").c_str(),
+						(Option_t*) "RECREATE");
+			}
 		} else if (driftGap == -1) {
 			driftStart = 89;
 			driftEnd = 622;
