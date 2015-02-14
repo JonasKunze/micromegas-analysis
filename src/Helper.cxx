@@ -26,9 +26,6 @@ void writeTH2FToPdf(TH2F* object, std::string subfolder,
 		std::string drawOptions) {
 	gStyle->SetOptStat(0);
 
-	std::cout << object->GetName() << std::endl;
-	std::cout << strcmp(object->GetName(), "hitWidthYByVAED") << std::endl;
-	std::cout << strcmp(object->GetName(), "hitWidthXByVAED") << std::endl;
 	if (strcmp(object->GetName(), "hitWidthYByVAED") == 0) {
 		object->SetMinimum(1.4);
 	}
@@ -54,24 +51,25 @@ void writeTH2FToPdf(TH2F* object, std::string subfolder,
 	gStyle->SetOptStat(1);
 }
 
-TGraph generateGraph(std::string name, std::string xTitle,
+TGraph* generateGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
 		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd,
 		int fitLineColor = 1) {
 	double xErrors[xValues.size()];
 	for (unsigned int i = 0; i < xValues.size(); i++) {
 		xErrors[i] = xError;
+		std::cout << yValues[i] << "\t" << yErrors[i] << std::endl;
 	}
 
-	TGraphErrors graph(xValues.size(), &xValues[0], &yValues[0], xErrors,
+	TGraphErrors* graph = new TGraphErrors(xValues.size(), &xValues[0], &yValues[0], xErrors,
 			&yErrors[0]);
-	graph.SetTitle(name.c_str());
-	graph.SetName(name.c_str());
-	graph.GetXaxis()->SetTitle(xTitle.c_str());
-	graph.GetYaxis()->SetTitle("average hit width [strips]");
-	graph.SetDrawOption("AP");
-	graph.SetMarkerColor(fitLineColor);
-	graph.SetMarkerStyle(21);
+	graph->SetTitle(name.c_str());
+	graph->SetName(name.c_str());
+	graph->GetXaxis()->SetTitle(xTitle.c_str());
+	graph->GetYaxis()->SetTitle("average hit width [strips]");
+	graph->SetDrawOption("AP");
+	graph->SetMarkerColor(fitLineColor);
+	graph->SetMarkerStyle(21);
 
 	std::cout << "########################################" << std::endl;
 	std::cout << "Fitting " << name << std::endl;
@@ -79,19 +77,19 @@ TGraph generateGraph(std::string name, std::string xTitle,
 
 	TF1 f1("f1", "pol1", fitRangeStart, fitRangeEnd);
 	f1.SetLineColor(fitLineColor);
-	//hitWidthVsV.Fit("pol1", "", "", fitRangeStart, fitRangeEnd);
-	graph.Fit(&f1, "R");
+	graph->Fit(&f1, "Rq");
+
 	return graph;
 }
 void plotGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
 		std::vector<double> yErrors, std::string subdir, double fitRangeStart,
 		double fitRangeEnd) {
-	TGraph graph = generateGraph(name, xTitle, xValues, xError, yValues,
+	TGraph* graph = generateGraph(name, xTitle, xValues, xError, yValues,
 			yErrors, fitRangeStart, fitRangeEnd);
-	graph.Write(graph.GetTitle());
+	graph->Write(name.c_str());
 
-	writeToPdf<TGraph>(&graph, subdir, "AP");
+	writeToPdf<TGraph>(graph, subdir, "AP");
 }
 
 void plotHitWidthGraph(std::string name, std::string xTitle,
@@ -158,10 +156,6 @@ TF1* fitGauss(
 	maxChargeCrossSection = new TH1F(histoName.str().c_str(), "; strip; charge",
 			endFitRange - startFitRange + 2, startFitRange, endFitRange);
 
-	// No idea why...but this needs to be done...Damn root
-//	maxChargeCrossSection->SetDirectory(0);
-//	TH1::AddDirectory(kFALSE);
-
 // Fill the histogram
 	for (unsigned int strip = 0; strip != stripAndChargeAtMaxChargeTimes.size();
 			strip++) {
@@ -191,7 +185,7 @@ void generateHitWidthVsDriftGap(std::string title,
 		double Ed = EdAndVa.first;
 
 		int lineColor = 1;
-		std::vector<TGraph> graphs;
+		std::vector<TGraph*> graphs;
 		for (auto& VaAndDg : EdAndVa.second) {
 			std::vector<double> driftGaps;
 			std::vector<double> HitWidths;
@@ -223,12 +217,12 @@ void generateHitWidthVsDriftGap(std::string title,
 				";drift Gap [mm]; average hit width [strips]");
 		lineColor = 1;
 		for (auto& graph : graphs) {
-			graph.SetMarkerColor(lineColor);
-			graph.SetLineColor(lineColor);
-			graph.SetMarkerStyle(19 + lineColor++);
-			graph.SetFillStyle(0);
-			graph.SetFillColor(0);
-			multigraph->Add(&graph, "");
+			graph->SetMarkerColor(lineColor);
+			graph->SetLineColor(lineColor);
+			graph->SetMarkerStyle(19 + lineColor++);
+			graph->SetFillStyle(0);
+			graph->SetFillColor(0);
+			multigraph->Add(graph, "");
 		}
 
 		multigraph->Write(multigraph->GetName());

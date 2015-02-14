@@ -90,7 +90,7 @@ void plotHitWidthGraph(std::string name, std::string xTitle,
 		double parameterValue, double driftGap, double fitRangeStart,
 		double fitRangeEnd);
 
-TGraph generateGraph(std::string name, std::string xTitle,
+TGraph* generateGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
 		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd, int fitLineColor);
 
