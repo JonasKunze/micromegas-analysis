@@ -35,9 +35,9 @@ public:
 		std::vector<double> gaps;
 		gaps.push_back(4.5);
 		gaps.push_back(8.0);
-//		gaps.push_back(10.5);
-//		gaps.push_back(15.5);
-//		gaps.push_back(-1);
+		gaps.push_back(10.5);
+		gaps.push_back(15.5);
+		gaps.push_back(-1);
 		return gaps;
 	}
 

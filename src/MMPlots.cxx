@@ -13,9 +13,10 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 5000; // 192154 (run with fewest events)
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 3
+int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 192154; // 192154 (run with fewest events)
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
+#define DRAW_CUT_EVENT_DISPLAYS true
 /*
  * Cuts
  */
@@ -674,6 +675,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		 */
 		int VD = MicroMegas.getVDbyFileName(Fitr->first);
 		int VA = MicroMegas.getVAbyFileName(Fitr->first);
+		double VE = VD / MicroMegas.driftGap;
 		TF1* hitWidthFitResultsX = fitHitWidhtHistogram(
 				general_mapHist1D["mmhitWidthX"],
 				general_mapCombined1D["hitWidthX"], VDsForGraphsX,
@@ -694,13 +696,17 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		writeToPdf<TH1F>(general_mapHist1D["mmhitWidthY"], "HitWidthHistograms",
 				"", namePrefix.str());
 
-		hitwidthsByEdbyVaByDgX[(int) (VD / MapFile::driftGap)][VA][MapFile::driftGap] =
+		hitwidthsByEdbyVaByDgX[(int) (VE)][VA][MapFile::driftGap] =
 				std::make_pair(hitWidthFitResultsX->GetParameter(1),
-						hitWidthFitResultsX->GetParError(1));
+						hitWidthFitResultsX->GetParameter(2)
+								/ sqrt(
+										general_mapHist1D["mmhitWidthX"]->Integral()));
 
-		hitwidthsByEdbyVaByDgY[(int) (VD / MapFile::driftGap)][VA][MapFile::driftGap] =
+		hitwidthsByEdbyVaByDgY[(int) (VE)][VA][MapFile::driftGap] =
 				std::make_pair(hitWidthFitResultsY->GetParameter(1),
-						hitWidthFitResultsY->GetParError(1));
+						hitWidthFitResultsY->GetParameter(2)
+								/ sqrt(
+										general_mapHist1D["mmhitWidthY"]->Integral()));
 
 		float lengthOfMeasurement = 0.;
 		if (!eventTimes.empty()) {
@@ -738,14 +744,18 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 
 		fileCombined->cd();
 		general_mapCombined["rate"]->SetBinContent(
-				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
-						/ MicroMegas.driftSteps + 1,
-				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
-						/ MicroMegas.ampSteps + 1,
+				(VD - MicroMegas.driftStart) / MicroMegas.driftSteps + 1,
+				(VA - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 				numberOfAcceptedEvents / lengthOfMeasurement);
 
 		global_mapCombined2D["RateByVAED"]->Fill(VD / MicroMegas.driftGap, VA,
 				numberOfAcceptedEvents / lengthOfMeasurement);
+
+		global_mapCombined2D["hitWidthYByVAED"]->Fill(VE, VA,
+				hitWidthFitResultsY->GetParameter(1));
+		global_mapCombined2D["hitWidthXByVAED"]->Fill(VE, VA,
+				hitWidthFitResultsX->GetParameter(1));
+		global_mapCombined2D["hitWidthByVAEDCounter"]->Fill(VE, VA, 1);
 
 		global_mapCombined2D["RateByVAEDCounter"]->Fill(
 				VD / MicroMegas.driftGap, VA, 1);
@@ -754,41 +764,29 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				numberOfAcceptedEvents / lengthOfMeasurement);
 
 		general_mapCombined["chargeX"]->SetBinContent(
-				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
-						/ MicroMegas.driftSteps + 1,
-				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
-						/ MicroMegas.ampSteps + 1,/*insert charge of X here*/
+				(VD - MicroMegas.driftStart) / MicroMegas.driftSteps + 1,
+				(VA - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,/*insert charge of X here*/
 				general_mapHist1D["mmchargex"]->GetMean());
 		general_mapCombined["chargeY"]->SetBinContent(
-				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
-						/ MicroMegas.driftSteps + 1,
-				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
-						/ MicroMegas.ampSteps + 1,/*insert charge of Y here*/
+				(VD - MicroMegas.driftStart) / MicroMegas.driftSteps + 1,
+				(VA - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,/*insert charge of Y here*/
 				general_mapHist1D["mmchargey"]->GetMean());
 
 		general_mapCombined["chargeXfieldStrength"]->SetBinContent(
-				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
-						/ MicroMegas.driftSteps + 1,
-				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
-						/ MicroMegas.ampSteps + 1,/*insert charge of X here*/
+				(VD - MicroMegas.driftStart) / MicroMegas.driftSteps + 1,
+				(VA - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,/*insert charge of X here*/
 				general_mapHist1D["mmchargex"]->GetMean());
 		general_mapCombined["chargeYfieldStrength"]->SetBinContent(
-				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
-						/ MicroMegas.driftSteps + 1,
-				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
-						/ MicroMegas.ampSteps + 1,/*insert charge of Y here*/
+				(VD - MicroMegas.driftStart) / MicroMegas.driftSteps + 1,
+				(VA - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,/*insert charge of Y here*/
 				general_mapHist1D["mmchargey"]->GetMean());
 		general_mapCombined["chargeXuncut"]->SetBinContent(
-				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
-						/ MicroMegas.driftSteps + 1,
-				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
-						/ MicroMegas.ampSteps + 1,/*insert charge of X here*/
+				(VD - MicroMegas.driftStart) / MicroMegas.driftSteps + 1,
+				(VA - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,/*insert charge of X here*/
 				general_mapHist1D["mmchargexUncut"]->GetMean());
 		general_mapCombined["chargeYuncut"]->SetBinContent(
-				(MicroMegas.getVDbyFileName(Fitr->first) - MicroMegas.driftStart)
-						/ MicroMegas.driftSteps + 1,
-				(MicroMegas.getVAbyFileName(Fitr->first) - MicroMegas.ampStart)
-						/ MicroMegas.ampSteps + 1,/*insert charge of Y here*/
+				(VD - MicroMegas.driftStart) / MicroMegas.driftSteps + 1,
+				(VA - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,/*insert charge of Y here*/
 				general_mapHist1D["mmchargexUncut"]->GetMean());
 
 		/// Saving Results
@@ -870,48 +868,49 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		delete iter->second;
 	}
 
-	fileCombined->cd();
-	fileCombined->mkdir("Cuts");
-	fileCombined->cd("Cuts");
-	for (auto& cutStat : CutStatistic::instances) {
+	if (DRAW_CUT_EVENT_DISPLAYS) {
+		fileCombined->cd();
+		fileCombined->mkdir("Cuts");
 		fileCombined->cd("Cuts");
-		cutStat->counterHistogram.Write();
+		for (auto& cutStat : CutStatistic::instances) {
+			fileCombined->cd("Cuts");
+			cutStat->counterHistogram.Write();
 
-		std::stringstream eventDisplayDirName;
-		eventDisplayDirName << cutStat->getName() << "events";
+			std::stringstream eventDisplayDirName;
+			eventDisplayDirName << cutStat->getName() << "events";
 
-		std::stringstream subdir;
-		subdir << MicroMegas.driftGap << "/" << eventDisplayDirName.str()
-				<< "/";
+			std::stringstream subdir;
+			subdir << MicroMegas.driftGap << "/" << eventDisplayDirName.str()
+					<< "/";
 
-		gDirectory->mkdir(eventDisplayDirName.str().c_str());
-		gDirectory->cd(eventDisplayDirName.str().c_str());
-		{
+			gDirectory->mkdir(eventDisplayDirName.str().c_str());
+			gDirectory->cd(eventDisplayDirName.str().c_str());
+			{
 
-			gDirectory->mkdir("Cut");
-			gDirectory->cd("Cut");
-			for (auto& display : cutStat->eventDisplaysCut) {
-				display->Write();
-				writeTH2FToPdf(display, subdir.str() + "cut", "colz");
-				delete display;
+				gDirectory->mkdir("Cut");
+				gDirectory->cd("Cut");
+				for (auto& display : cutStat->eventDisplaysCut) {
+					display->Write();
+					writeTH2FToPdf(display, subdir.str() + "cut", "colz");
+					delete display;
+				}
+				cutStat->eventDisplaysCut.clear();
+				gDirectory->cd("..");
 			}
-			cutStat->eventDisplaysCut.clear();
+			{
+				gDirectory->mkdir("Accepted");
+				gDirectory->cd("Accepted");
+				for (auto& display : cutStat->eventDisplaysAccepted) {
+					display->Write();
+					writeTH2FToPdf(display, subdir.str() + "accepted", "colz");
+					delete display;
+				}
+				cutStat->eventDisplaysAccepted.clear();
+				gDirectory->cd("..");
+			}
 			gDirectory->cd("..");
 		}
-		{
-			gDirectory->mkdir("Accepted");
-			gDirectory->cd("Accepted");
-			for (auto& display : cutStat->eventDisplaysAccepted) {
-				display->Write();
-				writeTH2FToPdf(display, subdir.str() + "accepted", "colz");
-				delete display;
-			}
-			cutStat->eventDisplaysAccepted.clear();
-			gDirectory->cd("..");
-		}
-		gDirectory->cd("..");
 	}
-
 	fileCombined->cd("");
 
 	/*
@@ -979,8 +978,6 @@ void calculateAveragesFromTH2F(TH2F* histo, TH2F* histoCounter) {
 			histo->SetBinContent(i, average);
 		}
 	}
-	global_mapCombined2D.erase(histoCounter->GetName());
-	delete histoCounter;
 }
 
 void initialize() {
@@ -999,8 +996,11 @@ void initialize() {
 	global_mapCombined2D["hitWidthYByVAED"] = new TH2F("hitWidthYByVAED",
 			";VD [V]; VA [V];Hit width [strips]", numberOfXBins, firstXBinValue,
 			lastXBinValue, 3, 488, 563);
-	global_mapCombined2D["hitWidthYByVAEDCounter"] = new TH2F(
-			"hitWidthYByVAEDCounter", ";ED [kV/m]; VA [V]; Counts",
+	global_mapCombined2D["hitWidthXByVAED"] = new TH2F("hitWidthXByVAED",
+			";VD [V]; VA [V];Hit width [strips]", numberOfXBins, firstXBinValue,
+			lastXBinValue, 3, 488, 563);
+	global_mapCombined2D["hitWidthByVAEDCounter"] = new TH2F(
+			"hitWidthByVAEDCounter", ";ED [kV/m]; VA [V]; Counts",
 			numberOfXBins, firstXBinValue, lastXBinValue, 3, 488, 563);
 
 	global_mapCombined2D["RateByVAED"] = new TH2F("RateByVAED",
@@ -1059,7 +1059,9 @@ int main(int argc, char *argv[]) {
 	 * Calculate average values of hitWidthYByVAVD
 	 */
 	calculateAveragesFromTH2F(global_mapCombined2D["hitWidthYByVAED"],
-			global_mapCombined2D["hitWidthYByVAEDCounter"]);
+			global_mapCombined2D["hitWidthByVAEDCounter"]);
+	calculateAveragesFromTH2F(global_mapCombined2D["hitWidthXByVAED"],
+			global_mapCombined2D["hitWidthByVAEDCounter"]);
 	calculateAveragesFromTH2F(global_mapCombined2D["RateByVAED"],
 			global_mapCombined2D["RateByVAEDCounter"]);
 
@@ -1086,53 +1088,9 @@ int main(int argc, char *argv[]) {
 	/*
 	 * Plot HitWidth graphs for constant EDs
 	 */
-	for (auto& EdAndVa : hitwidthsByDggyVaByEdX) {
-		double Ed = EdAndVa.first;
-		std::vector<TGraph> graphs;
-		for (auto& VaAndDg : EdAndVa.second) {
-			std::vector<double> driftGaps;
-			std::vector<double> HitWidths;
-			std::vector<double> HitWidthErrors;
+	generateHitWidthVsDriftGap("hitWidthVsDriftGapX", hitwidthsByDggyVaByEdX);
+	generateHitWidthVsDriftGap("hitWidthVsDriftGapY", hitwidthsByDggyVaByEdY);
 
-			int Va = VaAndDg.first;
-
-			for (auto& DgAndHitWidth : VaAndDg.second) {
-				driftGaps.push_back(DgAndHitWidth.first);
-				HitWidths.push_back(DgAndHitWidth.second.first);
-				HitWidthErrors.push_back(DgAndHitWidth.second.second);
-			}
-
-			std::stringstream title;
-			title << "VA" << Va;
-			graphs.push_back(
-					generateGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1,
-							HitWidths, HitWidthErrors, 0, 100));
-			fileCombined->cd();
-			plotGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1, HitWidths,
-					HitWidthErrors, "results", 0, 100);
-		}
-		/*
-		 * Combine every every graph for each DG to one multigraph
-		 */
-		TMultiGraph multigraph;
-		int i = 1;
-		for (auto& graph : graphs) {
-			graph.SetMarkerColor(i);
-			graph.SetMarkerStyle(19 + i++);
-			graph.SetFillStyle(0);
-			graph.SetFillColor(0);
-			multigraph.Add(&graph, "");
-		}
-
-		std::stringstream title;
-		title << "hitWidthVsDriftGapX-ED" << Ed;
-		multigraph.SetName(title.str().c_str());
-		multigraph.SetTitle(";drift Gap [mm]; average hit width [strips]");
-
-		fileCombined->cd();
-		multigraph.Write(multigraph.GetName());
-		writeToPdf<TMultiGraph>(&multigraph, "results", "ap", "", 0, true);
-	}
 	fileCombined->cd();
 	gStyle->SetOptStat(0);
 	for (auto& pair : global_mapCombined2D) {

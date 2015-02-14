@@ -8,6 +8,7 @@
 #define HELPER_H
 
 #include <TCanvas.h>
+#include <TGraph.h>
 #include <TStyle.h>
 #include <cstdlib>
 #include <sstream>
@@ -16,6 +17,7 @@
 #include <vector>
 #include <TMultiGraph.h>
 #include <TLegend.h>
+#include <map>
 
 class TF1;
 class TH1;
@@ -90,7 +92,7 @@ void plotHitWidthGraph(std::string name, std::string xTitle,
 
 TGraph generateGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
-		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd);
+		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd, int fitLineColor);
 
 void plotGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
@@ -106,5 +108,11 @@ TF1* fitGauss(
 		std::vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimes,
 		int eventNumber, std::string name, TH1F* &maxChargeCrossSection,
 		unsigned int startFitRange, unsigned int endFitRange);
+
+void generateHitWidthVsDriftGap(std::string title,
+		std::map<double/*ED*/,
+				std::map<int/*VA*/,
+						std::map<double/*DG*/,
+								std::pair<double/*HitWIDTHs*/, double/*Error*/>>>> hitwidthsByDggyVaByEd);
 
 #endif

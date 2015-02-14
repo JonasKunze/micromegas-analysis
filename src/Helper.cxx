@@ -26,6 +26,17 @@ void writeTH2FToPdf(TH2F* object, std::string subfolder,
 		std::string drawOptions) {
 	gStyle->SetOptStat(0);
 
+	std::cout << object->GetName() << std::endl;
+	std::cout << strcmp(object->GetName(), "hitWidthYByVAED") << std::endl;
+	std::cout << strcmp(object->GetName(), "hitWidthXByVAED") << std::endl;
+	if (strcmp(object->GetName(), "hitWidthYByVAED") == 0) {
+		object->SetMinimum(1.4);
+	}
+
+	if (strcmp(object->GetName(), "hitWidthXByVAED") == 0) {
+		object->SetMinimum(0.8);
+	}
+
 	std::stringstream pdfName;
 	pdfName << outPath << subfolder << "/";
 
@@ -45,7 +56,8 @@ void writeTH2FToPdf(TH2F* object, std::string subfolder,
 
 TGraph generateGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
-		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd) {
+		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd,
+		int fitLineColor = 1) {
 	double xErrors[xValues.size()];
 	for (unsigned int i = 0; i < xValues.size(); i++) {
 		xErrors[i] = xError;
@@ -58,13 +70,15 @@ TGraph generateGraph(std::string name, std::string xTitle,
 	graph.GetXaxis()->SetTitle(xTitle.c_str());
 	graph.GetYaxis()->SetTitle("average hit width [strips]");
 	graph.SetDrawOption("AP");
-	graph.SetMarkerColor(4);
+	graph.SetMarkerColor(fitLineColor);
 	graph.SetMarkerStyle(21);
 
 	std::cout << "########################################" << std::endl;
 	std::cout << "Fitting " << name << std::endl;
 	std::cout << "########################################" << std::endl;
+
 	TF1 f1("f1", "pol1", fitRangeStart, fitRangeEnd);
+	f1.SetLineColor(fitLineColor);
 	//hitWidthVsV.Fit("pol1", "", "", fitRangeStart, fitRangeEnd);
 	graph.Fit(&f1, "R");
 	return graph;
@@ -165,4 +179,60 @@ TF1* fitGauss(
 
 // return result of Gaussian fit
 	return maxChargeCrossSection->GetFunction("gaus");
+}
+
+void generateHitWidthVsDriftGap(std::string title,
+		std::map<double/*ED*/,
+				std::map<int/*VA*/,
+						std::map<double/*DG*/,
+								std::pair<double/*HitWIDTHs*/, double/*Error*/>>>> hitwidthsByDggyVaByEd) {
+
+	for (auto& EdAndVa : hitwidthsByDggyVaByEd) {
+		double Ed = EdAndVa.first;
+
+		int lineColor = 1;
+		std::vector<TGraph> graphs;
+		for (auto& VaAndDg : EdAndVa.second) {
+			std::vector<double> driftGaps;
+			std::vector<double> HitWidths;
+			std::vector<double> HitWidthErrors;
+
+			int Va = VaAndDg.first;
+
+			for (auto& DgAndHitWidth : VaAndDg.second) {
+				driftGaps.push_back(DgAndHitWidth.first);
+				HitWidths.push_back(DgAndHitWidth.second.first);
+				HitWidthErrors.push_back(DgAndHitWidth.second.second);
+			}
+
+			std::stringstream title;
+			title << "VA" << Va;
+			graphs.push_back(
+					generateGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1,
+							HitWidths, HitWidthErrors, 0, 100, lineColor++));
+			plotGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1, HitWidths,
+					HitWidthErrors, "results", 0, 100);
+		}
+
+		/*
+		 * Combine every every graph for each DG to one multigraph
+		 */
+		std::stringstream name;
+		name << title << "-ED" << Ed;
+		TMultiGraph* multigraph = new TMultiGraph(name.str().c_str(),
+				";drift Gap [mm]; average hit width [strips]");
+		lineColor = 1;
+		for (auto& graph : graphs) {
+			graph.SetMarkerColor(lineColor);
+			graph.SetLineColor(lineColor);
+			graph.SetMarkerStyle(19 + lineColor++);
+			graph.SetFillStyle(0);
+			graph.SetFillColor(0);
+			multigraph->Add(&graph, "");
+		}
+
+		multigraph->Write(multigraph->GetName());
+		writeToPdf<TMultiGraph>(multigraph, "results", "ap", "", 0, true);
+		//delete multigraph; // Why the **** can't I delete it?
+	}
 }
