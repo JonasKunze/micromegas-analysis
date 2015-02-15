@@ -61,8 +61,8 @@ TGraph* generateGraph(std::string name, std::string xTitle,
 		std::cout << yValues[i] << "\t" << yErrors[i] << std::endl;
 	}
 
-	TGraphErrors* graph = new TGraphErrors(xValues.size(), &xValues[0], &yValues[0], xErrors,
-			&yErrors[0]);
+	TGraphErrors* graph = new TGraphErrors(xValues.size(), &xValues[0],
+			&yValues[0], xErrors, &yErrors[0]);
 	graph->SetTitle(name.c_str());
 	graph->SetName(name.c_str());
 	graph->GetXaxis()->SetTitle(xTitle.c_str());
@@ -131,9 +131,7 @@ TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		VDsForGraphs.push_back(VD);
 		VAsForGraphs.push_back(VA);
 		hitWidthForGraphs.push_back(widthHistFitResult->GetParameter(1));
-		hitWidthForGraphsError.push_back(
-				widthHistFitResult->GetParameter(2)
-						/ sqrt(mmhitWidthHisto->Integral()));
+		hitWidthForGraphsError.push_back(widthHistFitResult->GetParError(1));
 	}
 
 	return widthHistFitResult;

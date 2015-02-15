@@ -13,10 +13,10 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 2000; // 192154 (run with fewest events)
-#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED 4
+int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 20000; // 192154 (run with fewest events)
+#define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
-#define DRAW_CUT_EVENT_DISPLAYS false
+#define DRAW_CUT_EVENT_DISPLAYS true
 /*
  * Cuts
  */
@@ -32,8 +32,8 @@ int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 2000; // 192154 (run with fewest events)
 //#define MIN_CHARGE_X 0
 //#define MIN_CHARGE_Y 0
 
-#define MIN_TIMESLICE 2
-#define MAX_TIMESLICE 24
+#define MIN_TIMESLICE 3
+#define MAX_TIMESLICE 23
 #define MAX_XY_TIME_DIFFERENCE 1
 #define MIN_XY_TIME_DIFFERENCE 0
 
@@ -90,9 +90,9 @@ maxi_t maxi;
 
 CutStatistic nocut_EventsWithSmallCharge("nocut_smallChargeEvents");
 
-CutStatistic timeCoincidenceCuts("a_timeCoincidenceCuts");
-CutStatistic chargeCuts("b_chargeCuts");
-CutStatistic timingCuts("c_timingCuts");
+CutStatistic timingCuts("a_timingCuts");
+CutStatistic timeCoincidenceCuts("b_timeCoincidenceCuts");
+CutStatistic chargeCuts("c_chargeCuts");
 //CutStatistic clusterCuts("bb_clusterCuts");
 CutStatistic absolutePositionXCuts("d_absolutePositionXCuts");
 CutStatistic absolutePositionYCuts("e_absolutePositionYCuts");
@@ -147,17 +147,36 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				event->timeSliceOfMaxChargeX - event->timeSliceOfMaxChargeY);
 	}
 
+	// Timing cut
+	if (event->timeSliceOfMaxChargeX < MIN_TIMESLICE
+			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE
+			|| event->timeSliceOfMaxChargeY < MIN_TIMESLICE
+			|| event->timeSliceOfMaxChargeY > MAX_TIMESLICE) {
+		timingCuts.Fill(1, event);
+		return false;
+	} else {
+		timingCuts.Fill(0, event);
+	}
+	general_mapCombined1D["chargexAllEventsAfterTimingCut"]->Fill(
+			event->maxChargeX);
+	general_mapCombined1D["chargeyAllEventsAfterTimingCut"]->Fill(
+			event->maxChargeY);
+
 	// coincidence cut
 	if (event->timeSliceOfMaxChargeX
 			- event->timeSliceOfMaxChargeY> MAX_XY_TIME_DIFFERENCE ||
 			event->timeSliceOfMaxChargeX - event->timeSliceOfMaxChargeY
 			< MIN_XY_TIME_DIFFERENCE) {
+
+		if (event->maxChargeX < MIN_CHARGE_X || event->maxChargeY < MIN_CHARGE_Y) {
+			nocut_EventsWithSmallCharge.Fill(0, event);
+		}
+
 		timeCoincidenceCuts.Fill(1, event);
 		return false;
 	} else {
 		timeCoincidenceCuts.Fill(0, event);
 	}
-
 	general_mapCombined1D["chargexAllEventsAfterCoincidenceCut"]->Fill(
 			event->maxChargeX);
 	general_mapCombined1D["chargeyAllEventsAfterCoincidenceCut"]->Fill(
@@ -165,10 +184,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	// Charge cut
 	if (event->maxChargeX < MIN_CHARGE_X || event->maxChargeY < MIN_CHARGE_Y) {
-		if (event->maxChargeX != -1&& event->maxChargeY != -1
-		&& event->maxChargeY < MIN_CHARGE_Y) {
-			nocut_EventsWithSmallCharge.Fill(0, event);
-		}
 		chargeCuts.Fill(1, event);
 		return false;
 	} else {
@@ -184,20 +199,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				event->timeSliceOfMaxChargeY);
 	}
 
-	// Timing cut
-	if (event->timeSliceOfMaxChargeX < MIN_TIMESLICE
-			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE
-			|| event->timeSliceOfMaxChargeY < MIN_TIMESLICE
-			|| event->timeSliceOfMaxChargeY > MAX_TIMESLICE) {
-		timingCuts.Fill(1, event);
-		return false;
-	} else {
-		timingCuts.Fill(0, event);
-	}
-	general_mapCombined1D["chargexAllEventsAfterTimingCut"]->Fill(
-			event->maxChargeX);
-	general_mapCombined1D["chargeyAllEventsAfterTimingCut"]->Fill(
-			event->maxChargeY);
 
 	/*
 	 * Calculate cluster sizes
@@ -468,7 +469,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 
 	general_mapCombined["chargeXfieldStrength"] = new TH2F(
 			"chargeXfieldStrength",
-			";Drift field strength [kV/m] ;VAmp [V];Charge", numberOfXBins,
+			";drift field strength [kV/m] ;VAmp [V];charge", numberOfXBins,
 			firstXBinValue / MicroMegas.driftGap,
 			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
@@ -476,7 +477,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeYfieldStrength"] = new TH2F(
 			"chargeYfieldStrength",
-			";Drift field strength [kV/m] ;VAmp [V];Charge", numberOfXBins,
+			";drift field strength [kV/m] ;VAmp [V];charge", numberOfXBins,
 			firstXBinValue / MicroMegas.driftGap,
 			lastXBinValue / MicroMegas.driftGap,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
@@ -484,24 +485,24 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["chargeXuncut"] = new TH2F("chargeXuncut",
-			";VDrift [V] ;VAmp [V];Charge", numberOfXBins, firstXBinValue,
+			";VDrift [V] ;VAmp [V];charge", numberOfXBins, firstXBinValue,
 			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 	general_mapCombined["chargeYuncut"] = new TH2F("chargeYuncut",
-			";VDrift [V] ;VAmp [V];Charge", numberOfXBins, firstXBinValue,
+			";VDrift [V] ;VAmp [V];charge", numberOfXBins, firstXBinValue,
 			lastXBinValue,
 			(MicroMegas.ampEnd - MicroMegas.ampStart) / MicroMegas.ampSteps + 1,
 			MicroMegas.ampStart - 0.5 * MicroMegas.ampSteps,
 			MicroMegas.ampEnd + 0.5 * MicroMegas.ampSteps);
 
 	general_mapCombined["mmhitneighboursX"] = new TH2F("mmhitneighboursX",
-			";distance [strips]; relative charge [% of max];Count", 13, -6.5,
+			";distance [strips]; relative charge [% of max];count", 13, -6.5,
 			6.5, 20, 0, 100);
 
 	general_mapCombined["mmhitneighboursY"] = new TH2F("mmhitneighboursY",
-			";distance [strips]; relative charge [% of max];Count", 13, -6.5,
+			";distance [strips]; relative charge [% of max];count", 13, -6.5,
 			6.5, 20, 0, 100);
 
 	general_mapCombined1D["chargexAllEvents"] = new TH1F("chargexAllEvents",
@@ -627,20 +628,20 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 
 		general_mapHist2D["mmtimeShapeX"] = new TH2F("mmtimeShapeX",
 				";time slice [25 ns]; charge relative to maximum strip [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
-				NUMBER_OF_TIME_SLICES, 20, 0, 100);
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES-0.5,
+				NUMBER_OF_TIME_SLICES+0.5, 45, -34.5, 100.5);
 		general_mapHist2D["mmtimeShapeY"] = new TH2F("mmtimeShapeY",
 				";time slice [25 ns]; charge relative to maximum strip [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
-				NUMBER_OF_TIME_SLICES, 20, 0, 100);
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES-0.5,
+				NUMBER_OF_TIME_SLICES+0.5, 45, -34.5, 100.5);
 		general_mapHist2D["mmtimeShapeXUncut"] = new TH2F("mmtimeShapeXUncut",
-				";time slice [25 ns]; charge relative to maximum strip [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
-				NUMBER_OF_TIME_SLICES, 20, 0, 100);
+				";time slice [25 ns]; charge relative to maximum charge [%]",
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES-0.5,
+				NUMBER_OF_TIME_SLICES+0.5, 45, -34.5, 100.5);
 		general_mapHist2D["mmtimeShapeYUncut"] = new TH2F("mmtimeShapeYUncut",
-				";time slice [25 ns]; charge relative to maximum strip [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES,
-				NUMBER_OF_TIME_SLICES, 20, 0, 100);
+				";time slice [25 ns]; charge relative to maximum charge [%]",
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES-0.5,
+				NUMBER_OF_TIME_SLICES+0.5, 45, -34.5, 100.5);
 
 		//initialize trees with structure defined above
 		TTree* fitTree = new TTree("T", "results of gauss fit");
@@ -696,17 +697,49 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		writeToPdf<TH1F>(general_mapHist1D["mmhitWidthY"], "HitWidthHistograms",
 				"", namePrefix.str());
 
+		/*
+		 * Store charge histograms
+		 */
+		namePrefix.str("");
+		namePrefix << "DG" << MapFile::driftGap << "_" << Fitr->first << "_";
+		writeToPdf<TH1F>(general_mapHist1D["mmchargex"], "ChargeHistograms", "",
+				namePrefix.str());
+		writeToPdf<TH1F>(general_mapHist1D["mmchargey"], "ChargeHistograms", "",
+				namePrefix.str());
+		writeToPdf<TH1F>(general_mapHist1D["mmchargexUncut"],
+				"ChargeHistograms", "", namePrefix.str());
+		writeToPdf<TH1F>(general_mapHist1D["mmchargeyUncut"],
+				"ChargeHistograms", "", namePrefix.str());
+
+		/*
+		 * Store timeshape histograms
+		 */
+		namePrefix.str("");
+		namePrefix << "DG" << MapFile::driftGap << "_" << Fitr->first << "_";
+		writeToPdf<TH2F>(general_mapHist2D["mmtimeShapeXUncut"],
+				"TimeShapeHistograms", "colz", namePrefix.str());
+		writeToPdf<TH2F>(general_mapHist2D["mmtimeShapeYUncut"],
+				"TimeShapeHistograms", "colz", namePrefix.str());
+		writeToPdf<TH2F>(general_mapHist2D["mmtimeShapeX"],
+				"TimeShapeHistograms", "colz", namePrefix.str());
+		writeToPdf<TH2F>(general_mapHist2D["mmtimeShapeY"],
+				"TimeShapeHistograms", "colz", namePrefix.str());
+
+		/*
+		 * Store hitmap histogram
+		 */
+		namePrefix.str("");
+		namePrefix << "DG" << MapFile::driftGap << "_" << Fitr->first << "_";
+		writeToPdf<TH2F>(general_mapHist2D["mmhitmap"], "HitMapHistograms", "",
+				namePrefix.str());
+
 		hitwidthsByEdbyVaByDgX[(int) (VE)][VA][MapFile::driftGap] =
 				std::make_pair(hitWidthFitResultsX->GetParameter(1),
-						hitWidthFitResultsX->GetParameter(2)
-								/ sqrt(
-										general_mapHist1D["mmhitWidthX"]->Integral()));
+						hitWidthFitResultsX->GetParError(1));
 
 		hitwidthsByEdbyVaByDgY[(int) (VE)][VA][MapFile::driftGap] =
 				std::make_pair(hitWidthFitResultsY->GetParameter(1),
-						hitWidthFitResultsY->GetParameter(2)
-								/ sqrt(
-										general_mapHist1D["mmhitWidthY"]->Integral()));
+						hitWidthFitResultsY->GetParError(1));
 
 		float lengthOfMeasurement = 0.;
 		if (!eventTimes.empty()) {
@@ -836,8 +869,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			general_mapCombined1D["hitWidthX"]->GetMeanError());
 	averageHitwidthsY.push_back(general_mapCombined1D["hitWidthY"]->GetMean());
 	averageHitwidthsYError.push_back(
-			general_mapCombined1D["hitWidthY"]->GetRMS()
-					/ sqrt(general_mapCombined1D["hitWidthY"]->Integral()));
+			general_mapCombined1D["hitWidthY"]->GetMeanError());
 
 	/*
 	 * Print cut statistics

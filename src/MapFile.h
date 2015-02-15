@@ -16,7 +16,7 @@
 
 using namespace std;
 
-#define RUN_WITH_HIGHES_VAVD false
+#define RUN_WITH_HIGHES_VAVD true
 
 class MapFile {
 private:
@@ -37,7 +37,6 @@ public:
 		gaps.push_back(8.0);
 		gaps.push_back(10.5);
 		gaps.push_back(15.5);
-		gaps.push_back(-1);
 		return gaps;
 	}
 

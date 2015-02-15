@@ -9,7 +9,7 @@
 
 #include "MMQuickEvent.h"
 
-#define MAX_EVENT_DISPLAYS_PER_CUT 6
+#define MAX_EVENT_DISPLAYS_PER_CUT 10
 
 std::vector<CutStatistic*> CutStatistic::instances;
 

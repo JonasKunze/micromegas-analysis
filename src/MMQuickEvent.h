@@ -251,7 +251,9 @@ public:
 			double chargeProportion = 100
 					* (double) (*apv_q)[stripWithMaxCharge][time] / maxCharge;
 			int distanceToMax = time - timeSliceOfMaxCharge;
-			histo->Fill(distanceToMax, chargeProportion);
+			if (distanceToMax != 0) {
+				histo->Fill(distanceToMax, chargeProportion);
+			}
 		}
 	}
 
@@ -447,15 +449,15 @@ public:
 		string histoNameY = histoName.str() + "_Y" + suffix;
 
 		/*
-		 * Initialize a new root TH2F histogram with the right title, labels and binning:
+		 * Initialize a new root TH2F histogram with the right title, labels and bining:
 		 *
 		 */
 		eventDisplayX = new TH2F(histoNameX.c_str(),
-				";Strip Number; Time [25 ns]", xStrips, 0, xStrips - 1,
+				";strip number; time [25 ns]; charge", xStrips, 0, xStrips - 1,
 				numberOfTimeSlices, 0, numberOfTimeSlices - 1);
 
 		eventDisplayY = new TH2F(histoNameY.c_str(),
-				";Strip Number; Time [25 ns]", yStrips, 0, yStrips - 1,
+				";strip number; time [25 ns]; charge", yStrips, 0, yStrips - 1,
 				numberOfTimeSlices, 0, numberOfTimeSlices - 1);
 
 		/*
