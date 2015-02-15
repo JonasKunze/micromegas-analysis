@@ -171,7 +171,7 @@ public:
 	short numberOfXHits;
 	short numberOfYHits;
 
-	vector<std::pair<int, short> > stripAndChargeAtMaxChargeTimeX; // absolute strip number and charges of all strips at fixed time slice (being the maximum charge time)
+	vector<std::pair<int, short> > stripAndChargeAtMaxChargeTimeX; // absolute strip number and charges of all strips at fixed time section (being the maximum charge time)
 	vector<std::pair<int, short> > stripAndChargeAtMaxChargeTimeY;
 
 	int positionOfMaxChargeInCrossSectionX;
@@ -182,9 +182,9 @@ public:
 	 */
 	void generateFixedTimeCrossSections() {
 		/*
-		 * Store the charge values of every strip number for the time slice with
+		 * Store the charge values of every strip number for the time section with
 		 * the maximum charge found in one event for X and Y separately (cross section
-		 * for time slices with max charge)
+		 * for time sections with max charge)
 		 */
 		stripAndChargeAtMaxChargeTimeX.clear();
 		stripAndChargeAtMaxChargeTimeY.clear();
@@ -241,9 +241,9 @@ public:
 	void generateTimeShape(TH2F* histo, short maxCharge, int stripWithMaxCharge,
 			int timeSliceOfMaxCharge) {
 		/*
-		 * Store the charge values of every strip number for the time slice with
+		 * Store the charge values of every strip number for the time section with
 		 * the maximum charge found in one event for X and Y separately (cross section
-		 * for time slices with max charge)
+		 * for time sections with max charge)
 		 */
 		const unsigned int numberOfTimeSlices = (*apv_q)[0].size();
 		// Iterate through all strips
@@ -387,9 +387,9 @@ public:
 
 		vector<unsigned int> apvIDofStrip = *apv_id; // isX(apvIDofStrip[i]) returns true if the i-th strip is X-layer
 		vector<unsigned int> stripNumShowingSignal = *mm_strip; // stripNumShowingSignal[i] is absolute strip number (strips without charge are not stored anywhere)
-		vector<vector<short> > chargeOfStripOfTime = *apv_q; // chargeOfStripOfTime[i][j] is the charge of strip i in time slice j (matrix of whole event)
-		vector<short> maxChargeOfStrip = *apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time slices
-		vector<short> timeSliceOfMaxChargeOfStrip = *apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time slice of the corresponding maximum charge (see above)
+		vector<vector<short> > chargeOfStripOfTime = *apv_q; // chargeOfStripOfTime[i][j] is the charge of strip i in time section j (matrix of whole event)
+		vector<short> maxChargeOfStrip = *apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time sections
+		vector<short> timeSliceOfMaxChargeOfStrip = *apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time section of the corresponding maximum charge (see above)
 
 		maxChargeX = -1;
 		stripWithMaxChargeX = -1;
@@ -404,7 +404,7 @@ public:
 		/*
 		 * Iterate through all strips and check if it is X or Y data. Compare the maximum charge
 		 * of the strip with the maximum charge found so far for the current axis. Store current charge, strip number
-		 * and time slice with the maximum charge if the current charge is larger than before.
+		 * and time section with the maximum charge if the current charge is larger than before.
 		 */
 		const unsigned int numberOfStrips = maxChargeOfStrip.size();
 		for (unsigned int strip = 0; strip != numberOfStrips; strip++) {
@@ -428,7 +428,7 @@ public:
 	}
 
 	/**
-	 * Generates a new 2D histogram (heatmap) showing all measured charges in all strips of x or y direction of all times slices.
+	 * Generates a new 2D histogram (heatmap) showing all measured charges in all strips of x or y direction of all times sections.
 	 * The histogram will be stored at general_mapHist2DEvent[eventNumber+"nameOfHistogram"]
 	 */
 	void generateEventDisplay(TH2F* &eventDisplayX, TH2F* &eventDisplayY,
@@ -437,7 +437,7 @@ public:
 		unsigned int numberOfTimeSlices = chargeOfTimeOfStrip[0].size();
 
 		/*
-		 * Generate a new 2D histogram for the event display (x=strip, y=timeslice, z=charge)
+		 * Generate a new 2D histogram for the event display (x=strip, y=timesection, z=charge)
 		 */
 
 		// Generate the title of the histogram

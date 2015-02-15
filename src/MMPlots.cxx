@@ -122,9 +122,9 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 // declaration of helping variables to more easily access event data
 	vector<unsigned int> apvIDofStrip = *event->apv_id; // MMQuickEvent::isX(apvIDofStrip[i]) returns true if the i-th strip is X-layer
 	vector<unsigned int> stripNumShowingSignal = *event->mm_strip; // stripNumShowingSignal[i] is absolute strip number (strips without charge are not stored anywhere)
-	vector<vector<short> > chargeOfStripOfTime = *event->apv_q; // chargeOfStripOfTime[i][j] is the charge of strip i in time slice j (matrix of whole event)
-	vector<short> maxChargeOfStrip = *event->apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time slices
-	vector<short> timeSliceOfMaxChargeOfStrip = *event->apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time slice of the corresponding maximum charge (see above)
+	vector<vector<short> > chargeOfStripOfTime = *event->apv_q; // chargeOfStripOfTime[i][j] is the charge of strip i in time section j (matrix of whole event)
+	vector<short> maxChargeOfStrip = *event->apv_qmax; // maxChargeOfStrip[i] is the maxmimal measured charge of strip i of all time sections
+	vector<short> timeSliceOfMaxChargeOfStrip = *event->apv_tbqmax; // timeSliceOfMaxChargeOfStrip[i] is the time section of the corresponding maximum charge (see above)
 
 	/*
 	 * 2. Find maximum charge
@@ -142,7 +142,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	general_mapCombined1D["timeDistributionUncutY"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
-
 	// Timing cut
 	if (event->timeSliceOfMaxChargeX < MIN_TIMESLICE
 			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE) {
@@ -156,14 +155,8 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	} else {
 		timingCuts.Fill(0, event);
 	}
-	general_mapCombined1D["chargexAllEventsAfterTimingCut"]->Fill(
-			event->maxChargeX);
-	general_mapCombined1D["chargeyAllEventsAfterTimingCut"]->Fill(
-			event->maxChargeY);
 
-	general_mapCombined1D["timeDistributionXAfterTimeCut"]->Fill(
-			event->timeSliceOfMaxChargeX);
-	general_mapCombined1D["timeDistributionYAfterTimeCut"]->Fill(
+	general_mapCombined1D["timeDistributionYAfterTimeXCut"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
 	if (event->timeSliceOfMaxChargeY < MIN_TIMESLICE
@@ -173,6 +166,16 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	} else {
 		timingCuts.Fill(0, event);
 	}
+
+	general_mapCombined1D["timeDistributionXAfterTimeCut"]->Fill(
+			event->timeSliceOfMaxChargeX);
+	general_mapCombined1D["timeDistributionYAfterTimeCut"]->Fill(
+			event->timeSliceOfMaxChargeY);
+
+	general_mapCombined1D["chargexAllEventsAfterTimingCut"]->Fill(
+			event->maxChargeX);
+	general_mapCombined1D["chargeyAllEventsAfterTimingCut"]->Fill(
+			event->maxChargeY);
 
 	if (event->timeSliceOfMaxChargeX != -1
 			&& event->timeSliceOfMaxChargeY != -1) {
@@ -209,10 +212,10 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	}
 
 	if (storeHistogram(eventNumber, 10000)) {
-		event->generateTimeShape(general_mapHist2D["mmtimeShapeXUncut"],
+		event->generateTimeShape(general_mapCombined["timeShapeXUncut"],
 				event->maxChargeX, event->stripWithMaxChargeX,
 				event->timeSliceOfMaxChargeX);
-		event->generateTimeShape(general_mapHist2D["mmtimeShapeYUncut"],
+		event->generateTimeShape(general_mapCombined["timeShapeYUncut"],
 				event->maxChargeY, event->stripWithMaxChargeY,
 				event->timeSliceOfMaxChargeY);
 	}
@@ -339,10 +342,10 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	 * #################### ALL CUTS DONE HERE ####################
 	 * ############################################################
 	 */
-	event->generateTimeShape(general_mapHist2D["mmtimeShapeX"],
+	event->generateTimeShape(general_mapCombined["timeShapeX"],
 			event->maxChargeX, event->stripWithMaxChargeX,
 			event->timeSliceOfMaxChargeX);
-	event->generateTimeShape(general_mapHist2D["mmtimeShapeY"],
+	event->generateTimeShape(general_mapCombined["timeShapeY"],
 			event->maxChargeY, event->stripWithMaxChargeY,
 			event->timeSliceOfMaxChargeY);
 
@@ -391,7 +394,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		general_mapPlotFit[std::string(fitHistoY->GetName())] = fitHistoY;
 
 		std::stringstream namePrefix;
-		namePrefix << "DG" << MapFile::driftGap << "_";
+		namePrefix << "DG" << MapFile::driftGap << "-";
 		writeToPdf<TH1F>(fitHistoX, "HitWidthFits", "", namePrefix.str());
 		writeToPdf<TH1F>(fitHistoY, "HitWidthFits", "", namePrefix.str());
 	} else {
@@ -522,6 +525,23 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 			";distance [strips]; relative charge [% of max];count", 13, -6.5,
 			6.5, 20, 0, 100);
 
+	general_mapCombined["timeShapeX"] = new TH2F("timeShapeX",
+			";time section [25 ns]; charge relative to maximum strip [%]",
+			2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
+			NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
+	general_mapCombined["timeShapeY"] = new TH2F("timeShapeY",
+			";time section [25 ns]; charge relative to maximum strip [%]",
+			2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
+			NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
+	general_mapCombined["timeShapeXUncut"] = new TH2F("timeShapeXUncut",
+			";time section [25 ns]; charge relative to maximum charge [%]",
+			2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
+			NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
+	general_mapCombined["timeShapeYUncut"] = new TH2F("timeShapeYUncut",
+			";time section [25 ns]; charge relative to maximum charge [%]",
+			2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
+			NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
+
 	general_mapCombined1D["chargexAllEvents"] = new TH1F("chargexAllEvents",
 			";charge X; entries", 100, 0, 1000);
 	general_mapCombined1D["chargeyAllEvents"] = new TH1F("chargeyAllEvents",
@@ -554,7 +574,10 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	general_mapCombined1D["timeDistributionYAfterTimeCut"] = new TH1F(
 			"timeDistributionYAfterTimeCut", ";time section ;entries",
 			NUMBER_OF_TIME_SLICES + 1, -1.5, 26.5);
-	;
+	general_mapCombined1D["timeDistributionYAfterTimeXCut"] = new TH1F(
+			"timeDistributionYAfterTimeXCut", ";time section ;entries",
+			NUMBER_OF_TIME_SLICES + 1, -1.5, 26.5);
+
 	general_mapCombined1D["timeDistributionX"] = new TH1F("timeDistributionX",
 			";time section ;entries", NUMBER_OF_TIME_SLICES + 1, -1.5, 26.5);
 	general_mapCombined1D["timeDistributionY"] = new TH1F("timeDistributionY",
@@ -650,23 +673,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				";x [strips]; y [strips]", xStrips, 0, xStrips, yStrips, 0,
 				yStrips);
 
-		general_mapHist2D["mmtimeShapeX"] = new TH2F("mmtimeShapeX",
-				";time slice [25 ns]; charge relative to maximum strip [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
-				NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
-		general_mapHist2D["mmtimeShapeY"] = new TH2F("mmtimeShapeY",
-				";time slice [25 ns]; charge relative to maximum strip [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
-				NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
-		general_mapHist2D["mmtimeShapeXUncut"] = new TH2F("mmtimeShapeXUncut",
-				";time slice [25 ns]; charge relative to maximum charge [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
-				NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
-		general_mapHist2D["mmtimeShapeYUncut"] = new TH2F("mmtimeShapeYUncut",
-				";time slice [25 ns]; charge relative to maximum charge [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
-				NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
-
 		//initialize trees with structure defined above
 		TTree* fitTree = new TTree("T", "results of gauss fit");
 
@@ -715,7 +721,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		 * Store HitWidth histograms
 		 */
 		std::stringstream namePrefix;
-		namePrefix << "DG" << MapFile::driftGap << "_" << Fitr->first << "_";
+		namePrefix << "DG" << MapFile::driftGap << "-" << Fitr->first << "-";
 		writeToPdf<TH1F>(general_mapHist1D["mmhitWidthX"], "HitWidthHistograms",
 				"", namePrefix.str());
 		writeToPdf<TH1F>(general_mapHist1D["mmhitWidthY"], "HitWidthHistograms",
@@ -725,7 +731,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		 * Store charge histograms
 		 */
 		namePrefix.str("");
-		namePrefix << "DG" << MapFile::driftGap << "_" << Fitr->first << "_";
+		namePrefix << "DG" << MapFile::driftGap << "-" << Fitr->first << "-";
 		writeToPdf<TH1F>(general_mapHist1D["mmchargex"], "ChargeHistograms", "",
 				namePrefix.str());
 		writeToPdf<TH1F>(general_mapHist1D["mmchargey"], "ChargeHistograms", "",
@@ -736,24 +742,10 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 				"ChargeHistograms", "", namePrefix.str());
 
 		/*
-		 * Store timeshape histograms
-		 */
-		namePrefix.str("");
-		namePrefix << "DG" << MapFile::driftGap << "_" << Fitr->first << "_";
-		writeToPdf<TH2F>(general_mapHist2D["mmtimeShapeXUncut"],
-				"TimeShapeHistograms", "colz", namePrefix.str());
-		writeToPdf<TH2F>(general_mapHist2D["mmtimeShapeYUncut"],
-				"TimeShapeHistograms", "colz", namePrefix.str());
-		writeToPdf<TH2F>(general_mapHist2D["mmtimeShapeX"],
-				"TimeShapeHistograms", "colz", namePrefix.str());
-		writeToPdf<TH2F>(general_mapHist2D["mmtimeShapeY"],
-				"TimeShapeHistograms", "colz", namePrefix.str());
-
-		/*
 		 * Store hitmap histogram
 		 */
 		namePrefix.str("");
-		namePrefix << "DG" << MapFile::driftGap << "_" << Fitr->first << "_";
+		namePrefix << "DG" << MapFile::driftGap << "-" << Fitr->first << "-";
 		writeToPdf<TH2F>(general_mapHist2D["mmhitmap"], "HitMapHistograms", "",
 				namePrefix.str());
 
