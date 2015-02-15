@@ -3,7 +3,7 @@
 	 1D vector event->apv_id: 		ID of APV which shows hit (needed to select if hit is in X or Y)
 	 1D vector event->mm_strip:		number of the strip which shows signal
 	 1D vector event->apv_qmax: 	maximum charge of the strip
-	 1D vector event->apv_tbqmax: 	time slice of maximum charge (time = #TimeSlice * 25)
+	 1D vector event->apv_tbqmax: 	time section of maximum charge (time = #TimeSlice * 25)
 
 	 access element of 1D vector: eg. event->apv_id->at(i) gives strip data at position i in all vectors correspond to
 
