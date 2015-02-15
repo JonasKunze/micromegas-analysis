@@ -13,7 +13,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 20000; // 192154 (run with fewest events)
+int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 192154; // 192154 (run with fewest events)
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 #define DRAW_CUT_EVENT_DISPLAYS true
@@ -32,8 +32,8 @@ int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 20000; // 192154 (run with fewest events
 //#define MIN_CHARGE_X 0
 //#define MIN_CHARGE_Y 0
 
-#define MIN_TIMESLICE 3
-#define MAX_TIMESLICE 23
+#define MIN_TIMESLICE 2
+#define MAX_TIMESLICE 24
 #define MAX_XY_TIME_DIFFERENCE 1
 #define MIN_XY_TIME_DIFFERENCE 0
 
@@ -149,9 +149,7 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 
 	// Timing cut
 	if (event->timeSliceOfMaxChargeX < MIN_TIMESLICE
-			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE
-			|| event->timeSliceOfMaxChargeY < MIN_TIMESLICE
-			|| event->timeSliceOfMaxChargeY > MAX_TIMESLICE) {
+			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE) {
 		timingCuts.Fill(1, event);
 		return false;
 	} else {
@@ -161,6 +159,19 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			event->maxChargeX);
 	general_mapCombined1D["chargeyAllEventsAfterTimingCut"]->Fill(
 			event->maxChargeY);
+
+	general_mapCombined1D["timeDistributionXAfterTimeCut"]->Fill(
+			event->timeSliceOfMaxChargeX);
+	general_mapCombined1D["timeDistributionYAfterTimeCut"]->Fill(
+			event->timeSliceOfMaxChargeY);
+
+	if (event->timeSliceOfMaxChargeY < MIN_TIMESLICE
+			|| event->timeSliceOfMaxChargeY > MAX_TIMESLICE) {
+		timingCuts.Fill(1, event);
+		return false;
+	} else {
+		timingCuts.Fill(0, event);
+	}
 
 	// coincidence cut
 	if (event->timeSliceOfMaxChargeX
@@ -198,7 +209,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 				event->maxChargeY, event->stripWithMaxChargeY,
 				event->timeSliceOfMaxChargeY);
 	}
-
 
 	/*
 	 * Calculate cluster sizes
@@ -329,6 +339,11 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 			event->maxChargeY, event->stripWithMaxChargeY,
 			event->timeSliceOfMaxChargeY);
 
+	general_mapCombined1D["timeDistributionX"]->Fill(
+			event->timeSliceOfMaxChargeX);
+	general_mapCombined1D["timeDistributionY"]->Fill(
+			event->timeSliceOfMaxChargeY);
+
 //storage after procession
 //Fill trees	(replace 1)
 	gauss.gaussXmean = gaussFitX->GetParameter(1);
@@ -376,11 +391,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		delete fitHistoY;
 		delete fitHistoX;
 	}
-
-	general_mapCombined1D["timeDistributionX"]->Fill(
-			event->timeSliceOfMaxChargeX);
-	general_mapCombined1D["timeDistributionY"]->Fill(
-			event->timeSliceOfMaxChargeY);
 
 	general_mapHist2D["mmhitmap"]->Fill(
 			/*strip with maximum charge in X*/stripNumShowingSignal[event->stripWithMaxChargeX],
@@ -531,16 +541,23 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	general_mapCombined1D["hitWidthY"] = new TH1F("hitWidthY",
 			";sigmaRunMittel ;entries", 50, 0, 3);
 
+	general_mapCombined1D["timeDistributionXAfterTimeCut"] = new TH1F(
+			"timeDistributionXAfterTimeCut", ";time section ;entries",
+			NUMBER_OF_TIME_SLICES + 1, -1.5, 26.5);
+	general_mapCombined1D["timeDistributionYAfterTimeCut"] = new TH1F(
+			"timeDistributionYAfterTimeCut", ";time section ;entries",
+			NUMBER_OF_TIME_SLICES + 1, -1.5, 26.5);
+	;
 	general_mapCombined1D["timeDistributionX"] = new TH1F("timeDistributionX",
-			";time section ;entries", NUMBER_OF_TIME_SLICES, -0.5, 26.5);
+			";time section ;entries", NUMBER_OF_TIME_SLICES + 1, -1.5, 26.5);
 	general_mapCombined1D["timeDistributionY"] = new TH1F("timeDistributionY",
-			";time section ;entries", NUMBER_OF_TIME_SLICES, -0.5, 26.5);
+			";time section ;entries", NUMBER_OF_TIME_SLICES + 1, -1.5, 26.5);
 	general_mapCombined1D["timeDistributionUncutX"] = new TH1F(
 			"timeDistributionUncutX", ";time section ;entries",
-			NUMBER_OF_TIME_SLICES, -0.5, 26.5);
+			NUMBER_OF_TIME_SLICES + 1, -1.5, 26.5);
 	general_mapCombined1D["timeDistributionUncutY"] = new TH1F(
 			"timeDistributionUncutY", ";time section ;entries",
-			NUMBER_OF_TIME_SLICES, -0.5, 26.5);
+			NUMBER_OF_TIME_SLICES + 1, -1.5, 26.5);
 
 	general_mapCombined1D["timeCoincidence"] = new TH1F("timeCoincidence",
 			";time x-y [25 ns] ;entries", 11, -5.5, 5.5);
@@ -628,20 +645,20 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 
 		general_mapHist2D["mmtimeShapeX"] = new TH2F("mmtimeShapeX",
 				";time slice [25 ns]; charge relative to maximum strip [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES-0.5,
-				NUMBER_OF_TIME_SLICES+0.5, 45, -34.5, 100.5);
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
+				NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
 		general_mapHist2D["mmtimeShapeY"] = new TH2F("mmtimeShapeY",
 				";time slice [25 ns]; charge relative to maximum strip [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES-0.5,
-				NUMBER_OF_TIME_SLICES+0.5, 45, -34.5, 100.5);
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
+				NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
 		general_mapHist2D["mmtimeShapeXUncut"] = new TH2F("mmtimeShapeXUncut",
 				";time slice [25 ns]; charge relative to maximum charge [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES-0.5,
-				NUMBER_OF_TIME_SLICES+0.5, 45, -34.5, 100.5);
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
+				NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
 		general_mapHist2D["mmtimeShapeYUncut"] = new TH2F("mmtimeShapeYUncut",
 				";time slice [25 ns]; charge relative to maximum charge [%]",
-				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES-0.5,
-				NUMBER_OF_TIME_SLICES+0.5, 45, -34.5, 100.5);
+				2 * NUMBER_OF_TIME_SLICES + 1, -NUMBER_OF_TIME_SLICES - 0.5,
+				NUMBER_OF_TIME_SLICES + 0.5, 45, -34.5, 100.5);
 
 		//initialize trees with structure defined above
 		TTree* fitTree = new TTree("T", "results of gauss fit");
