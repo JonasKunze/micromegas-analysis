@@ -168,14 +168,14 @@ public:
 	int stripWithMaxChargeY;
 	int timeSliceOfMaxChargeY;
 
-	unsigned short numberOfXHits;
-	unsigned short numberOfYHits;
+	short numberOfXHits;
+	short numberOfYHits;
 
-	vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimeX; // absolute strip number and charges of all strips at fixed time slice (being the maximum charge time)
-	vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimeY;
+	vector<std::pair<int, short> > stripAndChargeAtMaxChargeTimeX; // absolute strip number and charges of all strips at fixed time slice (being the maximum charge time)
+	vector<std::pair<int, short> > stripAndChargeAtMaxChargeTimeY;
 
-	unsigned int positionOfMaxChargeInCrossSectionX;
-	unsigned int positionOfMaxChargeInCrossSectionY;
+	int positionOfMaxChargeInCrossSectionX;
+	int positionOfMaxChargeInCrossSectionY;
 
 	/**
 	 * Returns true if the neighbour strips of the strip with maximum charge are within a given range
@@ -258,10 +258,10 @@ public:
 	}
 
 	bool runProportionCut(TH2F* maxNeighbourHisto,
-			vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTime,
+			vector<std::pair<int, short> > stripAndChargeAtMaxChargeTime,
 			short maxCharge, std::vector<std::pair<int, int> > proportionLimits,
 			CutStatistic& absolutePositionCuts, CutStatistic& proportionCuts,
-			bool lastProportionCut, unsigned int positionOfMaxCharge) {
+			bool lastProportionCut, int positionOfMaxCharge) {
 
 		if (stripAndChargeAtMaxChargeTime.size() == 0) {
 			return false;

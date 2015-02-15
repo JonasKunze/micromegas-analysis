@@ -105,9 +105,9 @@ TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		std::vector<double>& hitWidthForGraphsError, int VD, int VA);
 
 TF1* fitGauss(
-		std::vector<std::pair<unsigned int, short> > stripAndChargeAtMaxChargeTimes,
+		std::vector<std::pair<int, short> > stripAndChargeAtMaxChargeTimes,
 		int eventNumber, std::string name, TH1F* &maxChargeCrossSection,
-		unsigned int startFitRange, unsigned int endFitRange);
+		unsigned int startFitRange,unsigned int endFitRange);
 
 void generateHitWidthVsDriftGap(std::string title,
 		std::map<double/*ED*/,

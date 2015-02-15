@@ -32,8 +32,8 @@ int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 192154; // 192154 (run with fewest event
 //#define MIN_CHARGE_X 0
 //#define MIN_CHARGE_Y 0
 
-#define MIN_TIMESLICE 2
-#define MAX_TIMESLICE 24
+#define MIN_TIMESLICE 1
+#define MAX_TIMESLICE 25
 #define MAX_XY_TIME_DIFFERENCE 1
 #define MIN_XY_TIME_DIFFERENCE 0
 
@@ -89,6 +89,7 @@ gauss_t gauss;
 maxi_t maxi;
 
 CutStatistic nocut_EventsWithSmallCharge("nocut_smallChargeEvents");
+CutStatistic nocut_xtimeCutLargeYTimeEvents("nocut_xtimeCutLargeYTimeEvents");
 
 CutStatistic timingCuts("a_timingCuts");
 CutStatistic timeCoincidenceCuts("b_timeCoincidenceCuts");
@@ -141,16 +142,16 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	general_mapCombined1D["timeDistributionUncutY"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
-	if (event->timeSliceOfMaxChargeX != -1
-			&& event->timeSliceOfMaxChargeY != -1) {
-		general_mapCombined1D["timeCoincidence"]->Fill(
-				event->timeSliceOfMaxChargeX - event->timeSliceOfMaxChargeY);
-	}
 
 	// Timing cut
 	if (event->timeSliceOfMaxChargeX < MIN_TIMESLICE
 			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE) {
 		timingCuts.Fill(1, event);
+		if (event->timeSliceOfMaxChargeX != -1
+				&& event->timeSliceOfMaxChargeY > 0
+				&& event->timeSliceOfMaxChargeY < 7) {
+			nocut_xtimeCutLargeYTimeEvents.Fill(0, event);
+		}
 		return false;
 	} else {
 		timingCuts.Fill(0, event);
@@ -171,6 +172,12 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		return false;
 	} else {
 		timingCuts.Fill(0, event);
+	}
+
+	if (event->timeSliceOfMaxChargeX != -1
+			&& event->timeSliceOfMaxChargeY != -1) {
+		general_mapCombined1D["timeCoincidence"]->Fill(
+				event->timeSliceOfMaxChargeX - event->timeSliceOfMaxChargeY);
 	}
 
 	// coincidence cut
