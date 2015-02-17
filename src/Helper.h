@@ -92,12 +92,13 @@ void plotHitWidthGraph(std::string name, std::string xTitle,
 
 TGraph* generateGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
-		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd, int fitLineColor);
+		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd,
+		bool fitQuadratic, int fitLineColor);
 
 void plotGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
 		std::vector<double> yErrors, std::string subdir, double fitRangeStart,
-		double fitRangeEnd);
+		double fitRangeEnd, bool fitQuadratic);
 
 TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 		std::vector<double>& VDsForGraphs, std::vector<double>& VAsForGraphs,
@@ -107,7 +108,7 @@ TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 TF1* fitGauss(
 		std::vector<std::pair<int, short> > stripAndChargeAtMaxChargeTimes,
 		int eventNumber, std::string name, TH1F* &maxChargeCrossSection,
-		unsigned int startFitRange,unsigned int endFitRange);
+		unsigned int startFitRange, unsigned int endFitRange);
 
 void generateHitWidthVsDriftGap(std::string title,
 		std::map<double/*ED*/,

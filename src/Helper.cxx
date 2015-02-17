@@ -54,7 +54,7 @@ void writeTH2FToPdf(TH2F* object, std::string subfolder,
 TGraph* generateGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
 		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd,
-		int fitLineColor = 1) {
+		bool fitQuadratic, int fitLineColor = 1) {
 	double xErrors[xValues.size()];
 	for (unsigned int i = 0; i < xValues.size(); i++) {
 		xErrors[i] = xError;
@@ -75,34 +75,51 @@ TGraph* generateGraph(std::string name, std::string xTitle,
 	std::cout << "Fitting " << name << std::endl;
 	std::cout << "########################################" << std::endl;
 
-	TF1 f1("f1", "pol2", fitRangeStart, fitRangeEnd);
-
 	/*
 	 * f(x)=a*x+b
 	 * b = y1-a*x1
 	 * Calculate a/b by using first and last point (rough estimation only)
 	 */
-	double a = (yValues.back()-yValues.front())/(xValues.back()-xValues.front());
-	double b = yValues.front() - a*xValues.front();
 
-	f1.SetParName(0, "const");
-	f1.SetParName(1, "linear");
-	f1.SetParName(2, "quadratic");
-	f1.SetParameter(0, b);
-	f1.SetParameter(1, a);
-	f1.SetParameter(2, -0.001);
+	double a = 0.003;
+	double b = 1.3;
+//	if (yValues.size() > 2) {
+//		a = (yValues[2] - yValues[1]) / (xValues[2] - xValues[1]);
+//		b = yValues[1] - a * xValues[1];
+//	}
 
-	f1.SetLineColor(fitLineColor);
-	graph->Fit(&f1, "Rq");
+	if (fitQuadratic) {
+		TF1 f1("f1", "pol2", fitRangeStart, fitRangeEnd);
+
+		f1.SetParName(0, "const.");
+		f1.SetParName(1, "lin.");
+		f1.SetParName(2, "quad.");
+		f1.SetParameter(0, b);
+		f1.SetParameter(1, a);
+		f1.SetParameter(2, -0.001);
+
+		f1.SetLineColor(fitLineColor);
+		graph->Fit(&f1, "Rq");
+	} else {
+		TF1 f1("f1", "pol1", fitRangeStart, fitRangeEnd);
+
+		f1.SetParName(0, "const.");
+		f1.SetParName(1, "lin.");
+		f1.SetParameter(0, b);
+		f1.SetParameter(1, a);
+
+		f1.SetLineColor(fitLineColor);
+		graph->Fit(&f1, "Rq");
+	}
 
 	return graph;
 }
 void plotGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
 		std::vector<double> yErrors, std::string subdir, double fitRangeStart,
-		double fitRangeEnd) {
+		double fitRangeEnd, bool fitQuadratic) {
 	TGraph* graph = generateGraph(name, xTitle, xValues, xError, yValues,
-			yErrors, fitRangeStart, fitRangeEnd);
+			yErrors, fitRangeStart, fitRangeEnd, fitQuadratic);
 	graph->Write(name.c_str());
 
 	writeToPdf<TGraph>(graph, subdir, "AP");
@@ -130,7 +147,8 @@ void plotHitWidthGraph(std::string name, std::string xTitle,
 	subfolder << driftGap;
 
 	plotGraph(name, xTitle, xValuesFiltered, 1, yValuesFiltered,
-			yValueErrorsFiltered, subfolder.str(), fitRangeStart, fitRangeEnd);
+			yValueErrorsFiltered, subfolder.str(), fitRangeStart, fitRangeEnd,
+			false);
 }
 
 TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
@@ -220,9 +238,9 @@ void generateHitWidthVsDriftGap(std::string title,
 
 			graphs.push_back(
 					generateGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1,
-							HitWidths, HitWidthErrors, 0, 100, lineColor++));
+							HitWidths, HitWidthErrors, 0, 100, true, lineColor++));
 			plotGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1, HitWidths,
-					HitWidthErrors, graphSubDir.str(), 0, 100);
+					HitWidthErrors, graphSubDir.str(), 0, 100, true);
 		}
 
 		/*

@@ -13,7 +13,7 @@
  * Limit the number of events to be processed to gain speed for debugging
  * -1 means all events will be processed
  */
-int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 5000; // 192154 (run with fewest events)
+int MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 192154; // 192154 (run with fewest events)
 #define MAX_NUM_OF_RUNS_TO_BE_PROCESSED -1
 
 #define DRAW_CUT_EVENT_DISPLAYS true
@@ -1128,10 +1128,10 @@ int main(int argc, char *argv[]) {
 	fileCombined->cd();
 
 	plotGraph("hitWidthVsDriftGapX", "DriftGap [mm]", driftGaps, 0.1,
-			averageHitwidthsX, averageHitwidthsXError, "results", 0, 100);
+			averageHitwidthsX, averageHitwidthsXError, "results", 0, 100, true);
 
 	plotGraph("hitWidthVsDriftGapY", "DriftGap [mm]", driftGaps, 0.1,
-			averageHitwidthsY, averageHitwidthsYError, "results", 0, 100);
+			averageHitwidthsY, averageHitwidthsYError, "results", 0, 100, true);
 
 	/*
 	 * Plot HitWidth graphs for constant EDs
