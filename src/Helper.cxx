@@ -76,6 +76,22 @@ TGraph* generateGraph(std::string name, std::string xTitle,
 	std::cout << "########################################" << std::endl;
 
 	TF1 f1("f1", "pol2", fitRangeStart, fitRangeEnd);
+
+	/*
+	 * f(x)=a*x+b
+	 * b = y1-a*x1
+	 * Calculate a/b by using first and last point (rough estimation only)
+	 */
+	double a = (yValues.back()-yValues.front())/(xValues.back()-xValues.front());
+	double b = yValues.front() - a*xValues.front();
+
+	f1.SetParName(0, "const");
+	f1.SetParName(1, "linear");
+	f1.SetParName(2, "quadratic");
+	f1.SetParameter(0, b);
+	f1.SetParameter(1, a);
+	f1.SetParameter(2, -0.001);
+
 	f1.SetLineColor(fitLineColor);
 	graph->Fit(&f1, "Rq");
 
@@ -202,11 +218,11 @@ void generateHitWidthVsDriftGap(std::string title,
 			std::stringstream graphSubDir;
 			graphSubDir << "results/ED" << Ed;
 
-			TGraph* graph = generateGraph(title.str(), "DriftGap [mm]",
-					driftGaps, 0.1, HitWidths, HitWidthErrors, 0, 100,
-					lineColor++);
-			graphs.push_back(graph);
-			writeToPdf<TGraph>(graph, graphSubDir.str(), "AP");
+			graphs.push_back(
+					generateGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1,
+							HitWidths, HitWidthErrors, 0, 100, lineColor++));
+			plotGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1, HitWidths,
+					HitWidthErrors, graphSubDir.str(), 0, 100);
 		}
 
 		/*
