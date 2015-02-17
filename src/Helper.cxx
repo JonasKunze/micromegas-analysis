@@ -75,7 +75,7 @@ TGraph* generateGraph(std::string name, std::string xTitle,
 	std::cout << "Fitting " << name << std::endl;
 	std::cout << "########################################" << std::endl;
 
-	TF1 f1("f1", "pol1", fitRangeStart, fitRangeEnd);
+	TF1 f1("f1", "pol2", fitRangeStart, fitRangeEnd);
 	f1.SetLineColor(fitLineColor);
 	graph->Fit(&f1, "Rq");
 
@@ -137,8 +137,7 @@ TF1* fitHitWidhtHistogram(TH1F* mmhitWidthHisto, TH1F* combinedWidthHisto,
 	return widthHistFitResult;
 }
 
-TF1* fitGauss(
-		vector<std::pair<int, short> > stripAndChargeAtMaxChargeTimes,
+TF1* fitGauss(vector<std::pair<int, short> > stripAndChargeAtMaxChargeTimes,
 		int eventNumber, std::string name, TH1F* &maxChargeCrossSection,
 		unsigned int startFitRange, unsigned int endFitRange) {
 	// Generate the title of the histogram
@@ -199,11 +198,15 @@ void generateHitWidthVsDriftGap(std::string title,
 
 			std::stringstream title;
 			title << "VA" << Va;
-			graphs.push_back(
-					generateGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1,
-							HitWidths, HitWidthErrors, 0, 100, lineColor++));
-			plotGraph(title.str(), "DriftGap [mm]", driftGaps, 0.1, HitWidths,
-					HitWidthErrors, "results", 0, 100);
+
+			std::stringstream graphSubDir;
+			graphSubDir << "results/ED" << Ed;
+
+			TGraph* graph = generateGraph(title.str(), "DriftGap [mm]",
+					driftGaps, 0.1, HitWidths, HitWidthErrors, 0, 100,
+					lineColor++);
+			graphs.push_back(graph);
+			writeToPdf<TGraph>(graph, graphSubDir.str(), "AP");
 		}
 
 		/*

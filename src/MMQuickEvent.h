@@ -248,10 +248,10 @@ public:
 		const unsigned int numberOfTimeSlices = (*apv_q)[0].size();
 		// Iterate through all strips
 		for (unsigned int time = 0; time != numberOfTimeSlices; time++) {
-			double chargeProportion = 100
-					* (double) (*apv_q)[stripWithMaxCharge][time] / maxCharge;
 			int distanceToMax = time - timeSliceOfMaxCharge;
 			if (distanceToMax != 0) {
+				double chargeProportion = 100
+									* (double) (*apv_q)[stripWithMaxCharge][time] / maxCharge;
 				histo->Fill(distanceToMax, chargeProportion);
 			}
 		}
