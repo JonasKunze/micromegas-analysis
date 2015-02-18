@@ -10,7 +10,6 @@
 #include <TCanvas.h>
 #include <TGraph.h>
 #include <TStyle.h>
-#include <cstdlib>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -18,6 +17,7 @@
 #include <TMultiGraph.h>
 #include <TLegend.h>
 #include <map>
+#include <cmath>
 
 class TF1;
 class TH1;
@@ -93,7 +93,7 @@ void plotHitWidthGraph(std::string name, std::string xTitle,
 TGraph* generateGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
 		std::vector<double> yErrors, double fitRangeStart, double fitRangeEnd,
-		bool fitQuadratic, int fitLineColor);
+		bool fitQuadratic, int fitLineColor = 1);
 
 void plotGraph(std::string name, std::string xTitle,
 		std::vector<double> xValues, double xError, std::vector<double> yValues,
@@ -110,7 +110,7 @@ TF1* fitGauss(
 		int eventNumber, std::string name, TH1F* &maxChargeCrossSection,
 		unsigned int startFitRange, unsigned int endFitRange);
 
-void generateHitWidthVsDriftGap(std::string title,
+void generateHitWidthVsDriftGap(std::string title,std::string suffix,
 		std::map<double/*ED*/,
 				std::map<int/*VA*/,
 						std::map<double/*DG*/,

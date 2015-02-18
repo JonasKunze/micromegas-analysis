@@ -142,6 +142,16 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 	general_mapCombined1D["timeDistributionUncutY"]->Fill(
 			event->timeSliceOfMaxChargeY);
 
+	if (event->stripWithMaxChargeX != -1 && event->stripWithMaxChargeY != -1
+			&& storeHistogram(eventNumber, 10000)) {
+		event->generateTimeShape(general_mapCombined["timeShapeXUncut"],
+				event->maxChargeX, event->stripWithMaxChargeX,
+				event->timeSliceOfMaxChargeX);
+		event->generateTimeShape(general_mapCombined["timeShapeYUncut"],
+				event->maxChargeY, event->stripWithMaxChargeY,
+				event->timeSliceOfMaxChargeY);
+	}
+
 	// Timing cut
 	if (event->timeSliceOfMaxChargeX < MIN_TIMESLICE
 			|| event->timeSliceOfMaxChargeX > MAX_TIMESLICE) {
@@ -209,15 +219,6 @@ bool analyseMMEvent(MMQuickEvent *event, int eventNumber, int TRGBURST) {
 		return false;
 	} else {
 		chargeCuts.Fill(0, event);
-	}
-
-	if (storeHistogram(eventNumber, 10000)) {
-		event->generateTimeShape(general_mapCombined["timeShapeXUncut"],
-				event->maxChargeX, event->stripWithMaxChargeX,
-				event->timeSliceOfMaxChargeX);
-		event->generateTimeShape(general_mapCombined["timeShapeYUncut"],
-				event->maxChargeY, event->stripWithMaxChargeY,
-				event->timeSliceOfMaxChargeY);
 	}
 
 	/*
@@ -1137,8 +1138,10 @@ int main(int argc, char *argv[]) {
 	 * Plot HitWidth graphs for constant EDs
 	 */
 	fileCombined->cd();
-	generateHitWidthVsDriftGap("hitWidthVsDriftGapX", hitwidthsByDggyVaByEdX);
-	generateHitWidthVsDriftGap("hitWidthVsDriftGapY", hitwidthsByDggyVaByEdY);
+	generateHitWidthVsDriftGap("hitWidthVsDriftGapX", "X",
+			hitwidthsByDggyVaByEdX);
+	generateHitWidthVsDriftGap("hitWidthVsDriftGapY", "Y",
+			hitwidthsByDggyVaByEdY);
 
 	fileCombined->cd();
 	gStyle->SetOptStat(0);
@@ -1155,9 +1158,9 @@ int main(int argc, char *argv[]) {
 	/*
 	 * Duck run
 	 */
-	initialize();
-	MapFile MicroMegas(inPath, outPath, appendName, -1);
-	readFiles(MicroMegas, averageHitwidthsX, averageHitwidthsY,
-			averageHitwidthsXError, averageHitwidthsYError,
-			hitwidthsByDggyVaByEdX, hitwidthsByDggyVaByEdY);
+//	initialize();
+//	MapFile MicroMegas(inPath, outPath, appendName, -1);
+//	readFiles(MicroMegas, averageHitwidthsX, averageHitwidthsY,
+//			averageHitwidthsXError, averageHitwidthsYError,
+//			hitwidthsByDggyVaByEdX, hitwidthsByDggyVaByEdY);
 }
