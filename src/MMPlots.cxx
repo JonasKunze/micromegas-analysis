@@ -447,6 +447,11 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 						std::map<double/*DG*/,
 								std::pair<double/*HitWIDTHs*/, double/*Error*/>>>>& hitwidthsByEdbyVaByDgY) {
 
+
+	for (auto& cutStat : CutStatistic::instances) {
+		cutStat->reset();
+	}
+
 // map files to read different run of data in a row
 // get data file name from MapFile.h
 	map<string, TFile*> mapFile = MicroMegas.getFile();

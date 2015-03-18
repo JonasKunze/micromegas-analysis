@@ -32,6 +32,10 @@ public:
 	const char* getName() {
 		return counterHistogram.GetName();
 	}
+
+	void reset(){
+		counterHistogram.Reset();
+	}
 };
 
 #endif /* CUTSTATISTIC_H_ */
