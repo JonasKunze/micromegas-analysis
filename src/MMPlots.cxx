@@ -1064,10 +1064,8 @@ void initialize() {
 // Main Program
 int main(int argc, char *argv[]) {
 	if (MAX_NUM_OF_EVENTS_TO_BE_PROCESSED == -1) {
-		MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 1E6; // Reduce memory consumption
+		MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 1E6; // Reduce memory consumption (only reduces duck run)
 	}
-
-	std::map<std::string, std::map<int, int>> m;
 
 	std::stringstream mkdir;
 	mkdir << "mkdir -p " << outPath;
