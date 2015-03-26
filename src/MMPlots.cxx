@@ -447,7 +447,6 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 						std::map<double/*DG*/,
 								std::pair<double/*HitWIDTHs*/, double/*Error*/>>>>& hitwidthsByEdbyVaByDgY) {
 
-
 	for (auto& cutStat : CutStatistic::instances) {
 		cutStat->reset();
 	}
@@ -1161,9 +1160,9 @@ int main(int argc, char *argv[]) {
 	/*
 	 * Duck run
 	 */
-//	initialize();
-//	MapFile MicroMegas(inPath, outPath, appendName, -1);
-//	readFiles(MicroMegas, averageHitwidthsX, averageHitwidthsY,
-//			averageHitwidthsXError, averageHitwidthsYError,
-//			hitwidthsByDggyVaByEdX, hitwidthsByDggyVaByEdY);
+	initialize();
+	MapFile MicroMegas(inPath, outPath, appendName, -1);
+	readFiles(MicroMegas, averageHitwidthsX, averageHitwidthsY,
+			averageHitwidthsXError, averageHitwidthsYError,
+			hitwidthsByDggyVaByEdX, hitwidthsByDggyVaByEdY);
 }
