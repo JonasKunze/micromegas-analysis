@@ -20,10 +20,11 @@ using namespace std;
 
 class MapFile {
 private:
+	// Limits for proportion cut
 	static std::vector<std::pair<int, int> > neighbourStripeLimitsX;
 	static std::vector<std::pair<int, int> > neighbourStripeLimitsY;
 public:
-	//Voltage range, needed for initialization of combined histograms (hier die Schritte von VD und VA angeben (amp stimmt schon)
+	//Voltage range, needed for initialization of combined histograms
 	static int driftStart;
 	static int driftEnd;
 	static int driftSteps;
@@ -78,6 +79,7 @@ private:
 		neighbourStripeLimitsX.clear();
 		neighbourStripeLimitsY.clear();
 
+		// define proportion cut limits (in %)
 		neighbourStripeLimitsX.push_back(std::make_pair(15, 100));
 		neighbourStripeLimitsX.push_back(std::make_pair(0, 85));
 		neighbourStripeLimitsX.push_back(std::make_pair(-5, 45));
@@ -86,6 +88,7 @@ private:
 		neighbourStripeLimitsY.push_back(std::make_pair(10, 90));
 		neighbourStripeLimitsY.push_back(std::make_pair(-5, 55));
 
+		// define driftgap specific parameters
 		if (driftGap == 4.5) {
 			driftStart = 50;
 			driftEnd = 350;
@@ -93,15 +96,6 @@ private:
 			ampStart = 500;
 			ampEnd = 550;
 			ampSteps = 25;
-
-			// Erster Tag
-//			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
-//			neighbourStripeLimitsX.push_back(std::make_pair(5, 60));
-//			neighbourStripeLimitsX.push_back(std::make_pair(0, 25)); // 1. eintrag muss null sein, da sonst kaum events
-//
-//			neighbourStripeLimitsY.push_back(std::make_pair(35, 100));
-//			neighbourStripeLimitsY.push_back(std::make_pair(15, 70));
-//			neighbourStripeLimitsY.push_back(std::make_pair(1, 30));
 
 			m_mapFile["VD50VA500"] = new TFile(
 					(path + appendName + "_VD50VA500.root").c_str(),
@@ -159,14 +153,6 @@ private:
 			ampEnd = 550;
 			ampSteps = 25;
 
-//			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
-//			neighbourStripeLimitsX.push_back(std::make_pair(2, 85));
-//			neighbourStripeLimitsX.push_back(std::make_pair(0, 50));
-//
-//			neighbourStripeLimitsY.push_back(std::make_pair(40, 100));
-//			neighbourStripeLimitsY.push_back(std::make_pair(15, 85));
-//			neighbourStripeLimitsY.push_back(std::make_pair(1, 50));
-//			neighbourStripeLimitsY.push_back(std::make_pair(0, 30));
 			m_mapFile["VD172VA500"] = new TFile(
 					(path + appendName + "_VD172VA500.root").c_str(),
 					(Option_t*) "RECREATE");
@@ -217,14 +203,6 @@ private:
 			ampEnd = 550;
 			ampSteps = 25;
 
-//			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
-//			neighbourStripeLimitsX.push_back(std::make_pair(5, 75));
-//			neighbourStripeLimitsX.push_back(std::make_pair(0, 45));
-//
-//			neighbourStripeLimitsY.push_back(std::make_pair(40, 100));
-//			neighbourStripeLimitsY.push_back(std::make_pair(15, 80));
-//			neighbourStripeLimitsY.push_back(std::make_pair(1, 45));
-//			neighbourStripeLimitsY.push_back(std::make_pair(0, 30));
 			m_mapFile["VD117VA500"] = new TFile(
 					(path + appendName + "_VD117VA500.root").c_str(),
 					(Option_t*) "RECREATE");
@@ -280,14 +258,6 @@ private:
 			ampEnd = 550;
 			ampSteps = 25;
 
-//			neighbourStripeLimitsX.push_back(std::make_pair(20, 100));
-//			neighbourStripeLimitsX.push_back(std::make_pair(5, 70));
-//			neighbourStripeLimitsX.push_back(std::make_pair(0, 35));
-//
-//			neighbourStripeLimitsY.push_back(std::make_pair(40, 100));
-//			neighbourStripeLimitsY.push_back(std::make_pair(15, 70));
-//			neighbourStripeLimitsY.push_back(std::make_pair(1, 40));
-//			neighbourStripeLimitsY.push_back(std::make_pair(0, 30));
 
 			m_mapFile["VD89VA500"] = new TFile(
 					(path + appendName + "_VD89VA500.root").c_str(),
