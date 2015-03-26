@@ -604,6 +604,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 //	general_mapCombined1D["clusteryUncut"] = new TH1F("clusteryUncut",
 //			";y cluster size [strips]; entries", 30, 0, 30.);
 
+	// limit the number of events to be processed to MAX_NUM...
 	int numberOfRunsToProcess = mapFile.size();
 	if (MAX_NUM_OF_RUNS_TO_BE_PROCESSED < numberOfRunsToProcess
 			&& MAX_NUM_OF_RUNS_TO_BE_PROCESSED > 0) {
@@ -693,8 +694,10 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		vector<string> vec_Filenames = MicroMegas.getFileName(Fitr->first);
 		m_event = new MMQuickEvent(vec_Filenames, "raw", -1); //last number indicates number of events to be analysed, -1 for all events
 		m_TotalEventNumber = m_event->getEventNumber();
-
-		// loop over all events
+		
+		/*
+		 * Main Loop processing all events 
+		 */
 		int numberOfAcceptedEvents = 0;
 		while (m_event->getNextEvent()
 				&& eventNumber != MAX_NUM_OF_EVENTS_TO_BE_PROCESSED) {
@@ -919,6 +922,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 		delete iter->second;
 	}
 
+	// Draw event displays for all cut states
 	if (DRAW_CUT_EVENT_DISPLAYS) {
 		fileCombined->cd();
 		fileCombined->mkdir("Cuts");
@@ -965,7 +969,7 @@ void readFiles(MapFile MicroMegas, std::vector<double>& averageHitwidthsX,
 	fileCombined->cd("");
 
 	/*
-	 * Write any TH1F to the file and to pdf
+	 * Write every TH1F to the file and to pdf
 	 */
 	for (map<string, TH1F*>::iterator iter = general_mapCombined1D.begin();
 			iter != general_mapCombined1D.end(); iter++) {
@@ -1067,16 +1071,15 @@ int main(int argc, char *argv[]) {
 		MAX_NUM_OF_EVENTS_TO_BE_PROCESSED = 1E6; // Reduce memory consumption (only reduces duck run)
 	}
 
-	std::stringstream mkdir;
+	// create outputpath if it doesn't already exists
+	std::stringstream mkdir; 
 	mkdir << "mkdir -p " << outPath;
 	system(mkdir.str().c_str());
 
+	// initialize global variables
 	initialize();
 
-	/*
-	 * Set default style options
-	 */
-
+	// initialize data structures for result histograms
 	std::vector<double> averageHitwidthsX;
 	std::vector<double> averageHitwidthsXError;
 	std::vector<double> averageHitwidthsY;
